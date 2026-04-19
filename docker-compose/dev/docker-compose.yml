@@ -1,4 +1,6 @@
 name: lobehub
+# NOTE: 开发模式只跑依赖服务，应用本体在宿主机上跑 `bun run dev`。
+# 如果将来需要用容器化开发（CI/远程联调），可参考项目根目录 Dockerfile.dev。
 services:
   network-service:
     image: alpine
@@ -7,7 +9,6 @@ services:
     ports:
       - '${RUSTFS_PORT}:9000' # RustFS API
       - '9001:9001' # RustFS Console
-      - '${LOBE_PORT}:3210' # LobeChat
     command: tail -f /dev/null
     networks:
       - lobe-network
@@ -17,8 +18,9 @@ services:
   postgresql:
     image: paradedb/paradedb:latest-pg17
     container_name: lobe-postgres
+    # 暴露到 5433 避免与本机 Postgres.app / 系统 postgres 冲突
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - './data:/var/lib/postgresql/data'
     environment:
