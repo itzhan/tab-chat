@@ -7,8 +7,20 @@ import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { SettingsTabs } from '@/store/global/initialState';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { componentMap } from './componentMap';
+
+const ADMIN_TABS = new Set<string>([
+  SettingsTabs.AdminPlans,
+  SettingsTabs.AdminUsers,
+  SettingsTabs.AdminBoostPacks,
+  SettingsTabs.AdminBoostPackTemplates,
+  SettingsTabs.AdminSidebar,
+  SettingsTabs.AdminSkills,
+  SettingsTabs.AdminAdmins,
+]);
 
 const REDIRECT_MAP: Record<string, string> = {
   [SettingsTabs.Common]: SettingsTabs.Appearance,
@@ -25,13 +37,19 @@ interface SettingsContentProps {
 
 const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (activeTab && REDIRECT_MAP[activeTab]) {
       navigate(`/settings/${REDIRECT_MAP[activeTab]}`, { replace: true });
+      return;
     }
-  }, [activeTab, navigate]);
+    // Non-admins cannot access admin tabs even via direct URL
+    if (activeTab && ADMIN_TABS.has(activeTab) && !isAdmin) {
+      navigate('/settings/profile', { replace: true });
+    }
+  }, [activeTab, navigate, isAdmin]);
 
   const renderComponent = (tab: string) => {
     const Component = componentMap[tab as keyof typeof componentMap] || componentMap.appearance;

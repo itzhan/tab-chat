@@ -139,38 +139,6 @@ export const desktopRoutes: RouteObject[] = [
                 path: 'provider',
               },
               {
-                children: [
-                  {
-                    element: dynamicElement(
-                      () => import('@/routes/(main)/community/(list)/skill'),
-                      'Desktop > Discover > List > Skill',
-                    ),
-                    index: true,
-                  },
-                ],
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(list)/skill/_layout'),
-                  'Desktop > Discover > List > Skill > Layout',
-                ),
-                path: 'skill',
-              },
-              {
-                children: [
-                  {
-                    element: dynamicElement(
-                      () => import('@/routes/(main)/community/(list)/mcp'),
-                      'Desktop > Discover > List > MCP',
-                    ),
-                    index: true,
-                  },
-                ],
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(list)/mcp/_layout'),
-                  'Desktop > Discover > List > MCP > Layout',
-                ),
-                path: 'mcp',
-              },
-              {
                 element: dynamicElement(
                   () => import('@/routes/(main)/community/(list)/(home)'),
                   'Desktop > Discover > List > Home',
@@ -213,20 +181,6 @@ export const desktopRoutes: RouteObject[] = [
                   'Desktop > Discover > Detail > Provider',
                 ),
                 path: 'provider/:slug',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(detail)/skill'),
-                  'Desktop > Discover > Detail > Skill',
-                ),
-                path: 'skill/:slug',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(detail)/mcp'),
-                  'Desktop > Discover > Detail > MCP',
-                ),
-                path: 'mcp/:slug',
               },
               {
                 element: dynamicElement(
@@ -302,6 +256,25 @@ export const desktopRoutes: RouteObject[] = [
         path: 'resource',
       },
 
+      // Membership routes
+      {
+        children: [
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/membership/(home)'),
+              'Desktop > Membership > Home',
+            ),
+            index: true,
+          },
+        ],
+        element: dynamicElement(
+          () => import('@/routes/(main)/membership/_layout'),
+          'Desktop > Membership > Layout',
+        ),
+        errorElement: <ErrorBoundary resetPath="/membership" />,
+        path: 'membership',
+      },
+
       // Settings routes
       {
         children: [
@@ -346,6 +319,74 @@ export const desktopRoutes: RouteObject[] = [
         ),
         errorElement: <ErrorBoundary resetPath="/settings" />,
         path: 'settings',
+      },
+
+      // Admin console routes
+      {
+        children: [
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin'),
+              'Desktop > Admin > Home',
+            ),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/plans'),
+              'Desktop > Admin > Plans',
+            ),
+            path: 'plans',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/users'),
+              'Desktop > Admin > Users',
+            ),
+            path: 'users',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/boost-packs'),
+              'Desktop > Admin > BoostPacks',
+            ),
+            path: 'boost-packs',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/providers'),
+              'Desktop > Admin > Providers',
+            ),
+            path: 'providers',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/sidebar'),
+              'Desktop > Admin > Sidebar',
+            ),
+            path: 'sidebar',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/skills'),
+              'Desktop > Admin > Skills',
+            ),
+            path: 'skills',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/admin/admins'),
+              'Desktop > Admin > Admins',
+            ),
+            path: 'admins',
+          },
+        ],
+        element: dynamicElement(
+          () => import('@/routes/(main)/admin/_layout'),
+          'Desktop > Admin > Layout',
+        ),
+        errorElement: <ErrorBoundary resetPath="/admin" />,
+        path: 'admin',
       },
 
       // Memory routes

@@ -18,9 +18,10 @@ import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
-import AddSkillButton from '@/features/SkillStore/SkillList/AddSkillButton';
 import { useFetchInstalledPlugins } from '@/hooks/useFetchInstalledPlugins';
+import { adminService } from '@/services/admin';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
 import {
@@ -32,6 +33,8 @@ import {
 } from '@/store/tool/selectors';
 import { KlavisServerStatus } from '@/store/tool/slices/klavisStore';
 import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 import { type LobeToolType } from '@/types/tool/tool';
 
 import AgentSkillItem from './AgentSkillItem';
@@ -67,8 +70,32 @@ const SkillList = memo(() => {
   const installedPluginList = useToolStore(pluginSelectors.installedPluginMetaList, isEqual);
   const marketAgentSkills = useToolStore(agentSkillsSelectors.getMarketAgentSkills, isEqual);
   const userAgentSkills = useToolStore(agentSkillsSelectors.getUserAgentSkills, isEqual);
-  const builtinSkills = useToolStore((s) => s.builtinSkills, isEqual);
-  const allBuiltinTools = useToolStore((s) => s.builtinTools, isEqual);
+  const builtinSkillsRaw = useToolStore((s) => s.builtinSkills, isEqual);
+  const allBuiltinToolsRaw = useToolStore((s) => s.builtinTools, isEqual);
+
+  // Admin allowlist for builtin skills — admins see all; non-admins only see approved ones.
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  const { data: skillAllowlist } = useSWR('settings.skillAllowlist', () =>
+    adminService.getMyBuiltinSkillAllowlist(),
+  );
+  const allowlistSet = useMemo(
+    () => (Array.isArray(skillAllowlist) ? new Set(skillAllowlist) : null),
+    [skillAllowlist],
+  );
+  const isAllowed = (identifier: string) => {
+    if (isAdmin) return true;
+    if (!allowlistSet) return true;
+    return allowlistSet.has(identifier);
+  };
+
+  const builtinSkills = useMemo(
+    () => builtinSkillsRaw.filter((s) => isAllowed(s.identifier)),
+    [builtinSkillsRaw, isAdmin, allowlistSet],
+  );
+  const allBuiltinTools = useMemo(
+    () => allBuiltinToolsRaw.filter((t) => isAllowed(t.identifier)),
+    [allBuiltinToolsRaw, isAdmin, allowlistSet],
+  );
   const uninstalledBuiltinTools = useToolStore(
     builtinToolSelectors.uninstalledBuiltinTools,
     isEqual,
@@ -292,7 +319,6 @@ const SkillList = memo(() => {
     return (
       <Center className={styles.container} paddingBlock={48}>
         <Empty description={t('tab.skillDesc')} icon={SkillsIcon} title={t('tab.skillEmpty')} />
-        <AddSkillButton />
       </Center>
     );
   }
@@ -382,9 +408,6 @@ const SkillList = memo(() => {
       )}
       {userAgentSkills.length > 0 && renderUserAgentSkills()}
       {customMCPs.length > 0 && renderCustomMCPs()}
-      <div style={{ marginTop: 8 }}>
-        <AddSkillButton />
-      </div>
     </div>
   );
 });

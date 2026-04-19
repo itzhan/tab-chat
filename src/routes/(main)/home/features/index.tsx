@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useHomeStore } from '@/store/home';
 import { useUserStore } from '@/store/user';
-import { authSelectors } from '@/store/user/slices/auth/selectors';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
 
 import CommunityAgents from './CommunityAgents';
@@ -15,7 +14,6 @@ import WelcomeText from './WelcomeText';
 
 const Home = memo(() => {
   const { i18n } = useTranslation();
-  const isLogin = useUserStore(authSelectors.isLogin);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
   const inputActiveMode = useHomeStore((s) => s.inputActiveMode);
 

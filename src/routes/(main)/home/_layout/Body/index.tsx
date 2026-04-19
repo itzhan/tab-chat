@@ -5,13 +5,17 @@ import { EyeOffIcon, MoreHorizontalIcon, SlidersHorizontalIcon } from 'lucide-re
 import { memo, type ReactElement, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import useSWR from 'swr';
 
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import { type NavItem as NavItemType, useNavLayout } from '@/hooks/useNavLayout';
 import Recents from '@/routes/(main)/home/features/Recents';
+import { adminService } from '@/services/admin';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 import { isModifierClick } from '@/utils/navigation';
 import { prefetchRoute } from '@/utils/router';
 
@@ -28,6 +32,9 @@ export enum GroupKey {
 }
 
 const ACCORDION_KEYS = new Set<string>([GroupKey.Recents, GroupKey.Agent]);
+
+/** Keys that must always render regardless of admin allowlist / hidden sections */
+const ALWAYS_VISIBLE = new Set<string>([GroupKey.Agent, 'membership', 'image', 'video']);
 
 const accordionComponents: Record<string, (key: string) => ReactElement> = {
   [GroupKey.Agent]: (key) => <Agent itemKey={key} key={key} />,
@@ -77,10 +84,24 @@ const Body = memo(() => {
     return map;
   }, [topNavItems, bottomMenuItems]);
 
-  // Items that must always be visible regardless of hiddenSections
+  // Admin-controlled allowlist: items permitted globally for non-admin users.
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  const { data: adminAllowlist } = useSWR('sidebar.adminAllowlist', () =>
+    adminService.getMySidebarAllowlist(),
+  );
+  const allowlistSet = useMemo(
+    () => (adminAllowlist ? new Set(adminAllowlist) : undefined),
+    [adminAllowlist],
+  );
+
   const isVisible = useCallback(
-    (k: string) => k === GroupKey.Agent || !hiddenSections.includes(k),
-    [hiddenSections],
+    (k: string) => {
+      if (ALWAYS_VISIBLE.has(k)) return true;
+      // Non-admin users gated by admin allowlist
+      if (!isAdmin && allowlistSet && !allowlistSet.has(k)) return false;
+      return !hiddenSections.includes(k);
+    },
+    [hiddenSections, isAdmin, allowlistSet],
   );
 
   const visibleKeys = useMemo(() => sidebarItems.filter(isVisible), [sidebarItems, isVisible]);

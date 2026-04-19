@@ -66,6 +66,10 @@ export const componentMap = {
     loading: loading('Settings > Skill'),
   }),
 
+  [SettingsTabs.MySubscription]: dynamic(() => import('../my-subscription'), {
+    loading: loading('Settings > MySubscription'),
+  }),
+
   [SettingsTabs.Plans]: dynamic(() => import('@/business/client/BusinessSettingPages/Plans'), {
     loading: loading('Settings > Plans'),
   }),
@@ -81,4 +85,28 @@ export const componentMap = {
       loading: loading('Settings > Referral'),
     },
   ),
+
+  // Admin-only pages (exposed inside Settings when user.isAdmin)
+  [SettingsTabs.AdminPlans]: dynamic(() => import('@/features/AdminConsole/Plans'), {
+    loading: loading('Settings > Admin > Plans'),
+  }),
+  [SettingsTabs.AdminUsers]: dynamic(() => import('@/features/AdminConsole/Users'), {
+    loading: loading('Settings > Admin > Users'),
+  }),
+  [SettingsTabs.AdminBoostPacks]: dynamic(() => import('@/features/AdminConsole/BoostPacks'), {
+    loading: loading('Settings > Admin > BoostPacks'),
+  }),
+  [SettingsTabs.AdminBoostPackTemplates]: dynamic(
+    () => import('@/features/AdminConsole/BoostPackTemplates'),
+    { loading: loading('Settings > Admin > BoostPackTemplates') },
+  ),
+  [SettingsTabs.AdminSidebar]: dynamic(() => import('@/features/AdminConsole/Sidebar'), {
+    loading: loading('Settings > Admin > Sidebar'),
+  }),
+  [SettingsTabs.AdminSkills]: dynamic(() => import('@/features/AdminConsole/Skills'), {
+    loading: loading('Settings > Admin > Skills'),
+  }),
+  [SettingsTabs.AdminAdmins]: dynamic(() => import('@/features/AdminConsole/Admins'), {
+    loading: loading('Settings > Admin > Admins'),
+  }),
 };

@@ -1,6 +1,7 @@
 import { type LucideIcon } from 'lucide-react';
 import {
   BrainCircuit,
+  Crown,
   FilePenIcon,
   Image,
   LibraryBigIcon,
@@ -105,6 +106,15 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     keywordsKey: 'cmdk.keywords.settings',
     path: '/settings',
     pathPrefix: '/settings',
+  },
+  {
+    cmdkKey: 'cmdk.membership',
+    electronKey: 'navigation.membership',
+    icon: Crown,
+    id: 'membership',
+    keywords: ['membership', 'subscription', 'plan', 'pro', 'pricing', '会员', '套餐'],
+    path: '/membership',
+    pathPrefix: '/membership',
   },
 ];
 

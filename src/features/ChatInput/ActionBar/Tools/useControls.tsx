@@ -10,9 +10,11 @@ import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import isEqual from 'fast-deep-equal';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
 import { useCheckPluginsIsInstalled } from '@/hooks/useCheckPluginsIsInstalled';
 import { useFetchInstalledPlugins } from '@/hooks/useFetchInstalledPlugins';
+import { adminService } from '@/services/admin';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -24,6 +26,8 @@ import {
   lobehubSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import KlavisServerItem from './KlavisServerItem';
@@ -70,9 +74,43 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
   const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
 
   // Agent Skills related state
-  const installedBuiltinSkills = useToolStore(builtinToolSelectors.installedBuiltinSkills, isEqual);
+  const installedBuiltinSkillsRaw = useToolStore(
+    builtinToolSelectors.installedBuiltinSkills,
+    isEqual,
+  );
   const marketAgentSkills = useToolStore(agentSkillsSelectors.getMarketAgentSkills, isEqual);
   const userAgentSkills = useToolStore(agentSkillsSelectors.getUserAgentSkills, isEqual);
+
+  // Admin-managed builtin skill allowlist. `null` = never configured → show all.
+  // Admins always see everything.
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  const { data: skillAllowlist } = useSWR('chat.skillAllowlist', () =>
+    adminService.getMyBuiltinSkillAllowlist(),
+  );
+  const allowlistSet = useMemo(
+    () => (Array.isArray(skillAllowlist) ? new Set(skillAllowlist) : null),
+    [skillAllowlist],
+  );
+  const isAllowed = (identifier: string) => {
+    if (isAdmin) return true;
+    if (!allowlistSet) return true;
+    return allowlistSet.has(identifier);
+  };
+
+  // Admin title/description overrides for builtin skills
+  const { data: skillOverridesRaw } = useSWR('chat.skillOverrides', () =>
+    adminService.getMyBuiltinSkillOverrides(),
+  );
+  const skillOverrides: Record<string, { title?: string; description?: string }> =
+    (skillOverridesRaw ?? {}) as any;
+  const overrideTitle = (id: string, fallback?: string) => skillOverrides[id]?.title ?? fallback;
+  const overrideDesc = (id: string, fallback?: string) =>
+    skillOverrides[id]?.description ?? fallback;
+
+  const installedBuiltinSkills = useMemo(
+    () => installedBuiltinSkillsRaw.filter((s) => isAllowed(s.identifier)),
+    [installedBuiltinSkillsRaw, isAdmin, allowlistSet],
+  );
 
   const [
     useFetchUserKlavisServers,
@@ -123,8 +161,16 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
     if (isKlavisEnabledInEnv) {
       list = list.filter((item) => !allKlavisTypeIdentifiers.has(item.identifier));
     }
-    return list.filter((item) => !allSkillIdentifiers.has(item.identifier));
-  }, [builtinList, allKlavisTypeIdentifiers, isKlavisEnabledInEnv, allSkillIdentifiers]);
+    list = list.filter((item) => !allSkillIdentifiers.has(item.identifier));
+    return list.filter((item) => isAllowed(item.identifier));
+  }, [
+    builtinList,
+    allKlavisTypeIdentifiers,
+    isKlavisEnabledInEnv,
+    allSkillIdentifiers,
+    isAdmin,
+    allowlistSet,
+  ]);
 
   // Get recommended Klavis skill IDs
   const recommendedKlavisIds = useMemo(
@@ -254,7 +300,7 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItem
             checked={checked.includes(item.identifier)}
             id={item.identifier}
-            label={item.meta?.title}
+            label={overrideTitle(item.identifier, item.meta?.title)}
             onUpdate={async () => {
               setUpdating(true);
               await togglePlugin(item.identifier);
@@ -266,9 +312,14 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItemDetailPopover
             identifier={item.identifier}
             sourceLabel={t('skillStore.tabs.lobehub')}
-            description={t(`tools.builtins.${item.identifier}.description` as any, {
-              defaultValue: item.meta?.description || '',
-            })}
+            description={
+              overrideDesc(
+                item.identifier,
+                t(`tools.builtins.${item.identifier}.description` as any, {
+                  defaultValue: item.meta?.description || '',
+                }),
+              ) as string
+            }
             icon={
               <Avatar
                 avatar={item.meta.avatar}
@@ -277,13 +328,18 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
                 style={{ flex: 'none', marginInlineEnd: 0 }}
               />
             }
-            title={t(`tools.builtins.${item.identifier}.title` as any, {
-              defaultValue: item.meta?.title || item.identifier,
-            })}
+            title={
+              overrideTitle(
+                item.identifier,
+                t(`tools.builtins.${item.identifier}.title` as any, {
+                  defaultValue: item.meta?.title || item.identifier,
+                }),
+              ) as string
+            }
           />
         ),
       })),
-    [filteredBuiltinList, checked, togglePlugin, setUpdating, t],
+    [filteredBuiltinList, checked, togglePlugin, setUpdating, t, skillOverrides],
   );
 
   // Builtin Agent Skills list items (grouped under LobeHub)
@@ -300,7 +356,7 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItem
             checked={checked.includes(skill.identifier)}
             id={skill.identifier}
-            label={skill.name}
+            label={overrideTitle(skill.identifier, skill.name)}
             onUpdate={async () => {
               setUpdating(true);
               await togglePlugin(skill.identifier);
@@ -312,9 +368,14 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItemDetailPopover
             identifier={skill.identifier}
             sourceLabel={t('skillStore.tabs.lobehub')}
-            description={t(`tools.builtins.${skill.identifier}.description` as any, {
-              defaultValue: skill.description,
-            })}
+            description={
+              overrideDesc(
+                skill.identifier,
+                t(`tools.builtins.${skill.identifier}.description` as any, {
+                  defaultValue: skill.description,
+                }),
+              ) as string
+            }
             icon={
               skill.avatar ? (
                 <Avatar
@@ -327,13 +388,18 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
                 <Icon icon={SkillsIcon} size={36} />
               )
             }
-            title={t(`tools.builtins.${skill.identifier}.title` as any, {
-              defaultValue: skill.name,
-            })}
+            title={
+              overrideTitle(
+                skill.identifier,
+                t(`tools.builtins.${skill.identifier}.title` as any, {
+                  defaultValue: skill.name,
+                }),
+              ) as string
+            }
           />
         ),
       })),
-    [installedBuiltinSkills, checked, togglePlugin, setUpdating, t],
+    [installedBuiltinSkills, checked, togglePlugin, setUpdating, t, skillOverrides],
   );
 
   // Market Agent Skills list items (grouped under Community)
@@ -506,9 +572,12 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
     ...customPlugins.map(mapPluginToItem),
   ];
 
-  // Items for the market tab
+  // Commercial build:
+  //  - LobeHub group = admin-approved builtin skills
+  //  - Community group = admin-curated global plugins (from market, auto-injected via getPlugins)
+  //  - Custom group (user-defined customPlugin) stays hidden
+  void customGroupChildren;
   const marketItems: ItemType[] = [
-    // LobeHub group
     ...(lobehubGroupChildren.length > 0
       ? [
           {
@@ -519,24 +588,12 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           },
         ]
       : []),
-    // Community group
     ...(communityGroupChildren.length > 0
       ? [
           {
             children: communityGroupChildren,
             key: 'community',
             label: t('skillStore.tabs.community'),
-            type: 'group' as const,
-          },
-        ]
-      : []),
-    // Custom group (only shown when there are custom plugins)
-    ...(customGroupChildren.length > 0
-      ? [
-          {
-            children: customGroupChildren,
-            key: 'custom',
-            label: t('skillStore.tabs.custom'),
             type: 'group' as const,
           },
         ]
@@ -564,7 +621,7 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItem
             checked={true}
             id={item.identifier}
-            label={item.meta?.title}
+            label={overrideTitle(item.identifier, item.meta?.title)}
             onUpdate={async () => {
               setUpdating(true);
               await togglePlugin(item.identifier);
@@ -576,9 +633,14 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItemDetailPopover
             identifier={item.identifier}
             sourceLabel={t('skillStore.tabs.lobehub')}
-            description={t(`tools.builtins.${item.identifier}.description` as any, {
-              defaultValue: item.meta?.description || '',
-            })}
+            description={
+              overrideDesc(
+                item.identifier,
+                t(`tools.builtins.${item.identifier}.description` as any, {
+                  defaultValue: item.meta?.description || '',
+                }),
+              ) as string
+            }
             icon={
               <Avatar
                 avatar={item.meta.avatar}
@@ -587,9 +649,14 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
                 style={{ flex: 'none', marginInlineEnd: 0 }}
               />
             }
-            title={t(`tools.builtins.${item.identifier}.title` as any, {
-              defaultValue: item.meta?.title || item.identifier,
-            })}
+            title={
+              overrideTitle(
+                item.identifier,
+                t(`tools.builtins.${item.identifier}.title` as any, {
+                  defaultValue: item.meta?.title || item.identifier,
+                }),
+              ) as string
+            }
           />
         ),
       }));
@@ -621,7 +688,7 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItem
             checked={true}
             id={skill.identifier}
-            label={skill.name}
+            label={overrideTitle(skill.identifier, skill.name)}
             onUpdate={async () => {
               setUpdating(true);
               await togglePlugin(skill.identifier);
@@ -633,9 +700,14 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
           <ToolItemDetailPopover
             identifier={skill.identifier}
             sourceLabel={t('skillStore.tabs.lobehub')}
-            description={t(`tools.builtins.${skill.identifier}.description` as any, {
-              defaultValue: skill.description,
-            })}
+            description={
+              overrideDesc(
+                skill.identifier,
+                t(`tools.builtins.${skill.identifier}.description` as any, {
+                  defaultValue: skill.description,
+                }),
+              ) as string
+            }
             icon={
               skill.avatar ? (
                 <Avatar
@@ -648,9 +720,14 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
                 <Icon icon={SkillsIcon} size={36} />
               )
             }
-            title={t(`tools.builtins.${skill.identifier}.title` as any, {
-              defaultValue: skill.name,
-            })}
+            title={
+              overrideTitle(
+                skill.identifier,
+                t(`tools.builtins.${skill.identifier}.title` as any, {
+                  defaultValue: skill.name,
+                }),
+              ) as string
+            }
           />
         ),
       }));
@@ -802,53 +879,15 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
         ),
       }));
 
-    // Community group (Market Agent Skills + community plugins)
+    // Commercial build: custom plugins stay hidden; community group now houses
+    // admin-curated global plugins (merged via server-side getPlugins).
+    void enabledCustomPlugins;
     const allCommunityItems = [...enabledMarketAgentSkillItems, ...enabledCommunityPlugins];
     if (allCommunityItems.length > 0) {
       installedItems.push({
         children: allCommunityItems,
         key: 'installed-community',
         label: t('skillStore.tabs.community'),
-        type: 'group',
-      });
-    }
-
-    // Enabled User Agent Skills
-    const enabledUserAgentSkillItems = userAgentSkills
-      .filter((skill) => checked.includes(skill.identifier))
-      .map((skill) => ({
-        icon: <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />,
-        key: skill.identifier,
-        label: (
-          <ToolItem
-            checked={true}
-            id={skill.identifier}
-            label={skill.name}
-            onUpdate={async () => {
-              setUpdating(true);
-              await togglePlugin(skill.identifier);
-              setUpdating(false);
-            }}
-          />
-        ),
-        popoverContent: (
-          <ToolItemDetailPopover
-            description={skill.description}
-            icon={<Icon icon={SkillsIcon} size={36} />}
-            identifier={skill.identifier}
-            sourceLabel={t('skillStore.tabs.custom')}
-            title={skill.name}
-          />
-        ),
-      }));
-
-    // Custom group (User Agent Skills + custom plugins)
-    const allCustomItems = [...enabledUserAgentSkillItems, ...enabledCustomPlugins];
-    if (allCustomItems.length > 0) {
-      installedItems.push({
-        children: allCustomItems,
-        key: 'installed-custom',
-        label: t('skillStore.tabs.custom'),
         type: 'group',
       });
     }

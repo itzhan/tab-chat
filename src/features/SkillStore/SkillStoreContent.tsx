@@ -6,11 +6,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Search from './Search';
-import AddSkillButton from './SkillList/AddSkillButton';
 import CustomList from './SkillList/Custom';
 import LobeHubList from './SkillList/LobeHub';
-import MarketSkillList from './SkillList/MarketSkills';
-import MCPList from './SkillList/MCP';
 
 export enum SkillStoreTab {
   Custom = 'custom',
@@ -23,18 +20,15 @@ export const SkillStoreContent = () => {
   const { t } = useTranslation('setting');
   const [activeTab, setActiveTab] = useState<SkillStoreTab>(SkillStoreTab.LobeHub);
   const [lobehubKeywords, setLobehubKeywords] = useState('');
-  const [skillKeywords, setSkillKeywords] = useState('');
 
+  // Commercial build: Skills and MCP tabs are hidden from end users.
+  // Only LobeHub (admin-approved) and Custom (admin-curated) remain.
   const options: SegmentedOptions = [
     { label: t('skillStore.tabs.lobehub'), value: SkillStoreTab.LobeHub },
-    { label: 'Skills', value: SkillStoreTab.Skills },
-    { label: t('skillStore.tabs.mcp'), value: SkillStoreTab.MCP },
     { label: t('skillStore.tabs.custom'), value: SkillStoreTab.Custom },
   ];
 
   const isLobeHub = activeTab === SkillStoreTab.LobeHub;
-  const isSkills = activeTab === SkillStoreTab.Skills;
-  const isMCP = activeTab === SkillStoreTab.MCP;
   const isCustom = activeTab === SkillStoreTab.Custom;
 
   return (
@@ -49,23 +43,16 @@ export const SkillStoreContent = () => {
             variant={'filled'}
             onChange={(v) => setActiveTab(v as SkillStoreTab)}
           />
-          <AddSkillButton />
         </Flexbox>
         <Search
           activeTab={activeTab}
           onLobeHubSearch={setLobehubKeywords}
-          onSkillSearch={setSkillKeywords}
+          onSkillSearch={() => {}}
         />
       </Flexbox>
       <Flexbox height={496}>
         <Flexbox flex={1} style={{ display: isLobeHub ? 'flex' : 'none', overflow: 'auto' }}>
           <LobeHubList keywords={lobehubKeywords} />
-        </Flexbox>
-        <Flexbox flex={1} style={{ display: isSkills ? 'flex' : 'none', overflow: 'auto' }}>
-          <MarketSkillList keywords={skillKeywords} />
-        </Flexbox>
-        <Flexbox flex={1} style={{ display: isMCP ? 'flex' : 'none', overflow: 'auto' }}>
-          <MCPList />
         </Flexbox>
         <Flexbox flex={1} style={{ display: isCustom ? 'flex' : 'none', overflow: 'auto' }}>
           <CustomList />

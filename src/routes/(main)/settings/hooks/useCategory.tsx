@@ -8,6 +8,7 @@ import {
   ChartColumnBigIcon,
   Coins,
   CreditCard,
+  CrownIcon,
   Database,
   EllipsisIcon,
   EthernetPort,
@@ -16,10 +17,15 @@ import {
   KeyboardIcon,
   KeyIcon,
   KeyRound,
+  Layout,
   Map,
+  Package,
   PaletteIcon,
+  Rocket,
   Sparkles,
   TerminalSquare,
+  UserCog,
+  Users,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +43,7 @@ import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
 
 export enum SettingsGroupKey {
+  Admin = 'admin',
   Agent = 'agent',
   General = 'general',
   Subscription = 'subscription',
@@ -61,9 +68,10 @@ export const useCategory = () => {
   const { t: tSubscription } = useTranslation('subscription');
   const mobile = useServerConfigStore((s) => s.isMobile);
   const { hideDocs, showApiKeyManage } = useServerConfigStore(featureFlagsSelectors);
-  const [avatar, username] = useUserStore((s) => [
+  const [avatar, username, isAdmin] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
+    userProfileSelectors.isAdmin(s),
   ]);
   const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
@@ -95,6 +103,11 @@ export const useCategory = () => {
         icon: PaletteIcon,
         key: SettingsTabs.Appearance,
         label: t('tab.appearance'),
+      },
+      {
+        icon: CrownIcon,
+        key: SettingsTabs.MySubscription,
+        label: '我的会员',
       },
       !mobile && {
         icon: KeyboardIcon,
@@ -132,85 +145,108 @@ export const useCategory = () => {
       });
     }
 
-    // Agent group
-    const agentItems: CategoryItem[] = [
-      (!enableBusinessFeatures || isDevMode) && {
-        icon: Brain,
-        key: SettingsTabs.Provider,
-        label: t('tab.provider'),
-      },
-      {
-        icon: Sparkles,
-        key: SettingsTabs.ServiceModel,
-        label: t('tab.serviceModel'),
-      },
-      {
-        icon: SkillsIcon,
-        key: SettingsTabs.Skill,
-        label: t('tab.skill'),
-      },
-      {
-        icon: BrainCircuit,
-        key: SettingsTabs.Memory,
-        label: t('tab.memory'),
-      },
-      {
-        icon: KeyRound,
-        key: SettingsTabs.Creds,
-        label: t('tab.creds'),
-      },
-      showApiKeyManage && {
-        icon: KeyIcon,
-        key: SettingsTabs.APIKey,
-        label: tAuth('tab.apikey'),
-      },
-    ].filter(Boolean) as CategoryItem[];
+    // Agent group (admin only —普通用户不配置服务商/模型/凭证)
+    if (isAdmin) {
+      const agentItems: CategoryItem[] = [
+        (!enableBusinessFeatures || isDevMode) && {
+          icon: Brain,
+          key: SettingsTabs.Provider,
+          label: t('tab.provider'),
+        },
+        {
+          icon: Sparkles,
+          key: SettingsTabs.ServiceModel,
+          label: t('tab.serviceModel'),
+        },
+        {
+          icon: SkillsIcon,
+          key: SettingsTabs.Skill,
+          label: t('tab.skill'),
+        },
+        {
+          icon: BrainCircuit,
+          key: SettingsTabs.Memory,
+          label: t('tab.memory'),
+        },
+        {
+          icon: KeyRound,
+          key: SettingsTabs.Creds,
+          label: t('tab.creds'),
+        },
+        showApiKeyManage && {
+          icon: KeyIcon,
+          key: SettingsTabs.APIKey,
+          label: tAuth('tab.apikey'),
+        },
+      ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: agentItems,
-      key: SettingsGroupKey.Agent,
-      title: t('group.aiConfig'),
-    });
+      groups.push({
+        items: agentItems,
+        key: SettingsGroupKey.Agent,
+        title: t('group.aiConfig'),
+      });
+    }
 
-    // System group
-    const systemItems: CategoryItem[] = [
-      isDesktop && {
-        icon: EthernetPort,
-        key: SettingsTabs.Proxy,
-        label: t('tab.proxy'),
-      },
-      isDesktop && {
-        icon: TerminalSquare,
-        key: SettingsTabs.SystemTools,
-        label: t('tab.systemTools'),
-      },
-      {
-        icon: Database,
-        key: SettingsTabs.Storage,
-        label: t('tab.storage'),
-      },
-      isDevMode && {
-        icon: KeyIcon,
-        key: SettingsTabs.APIKey,
-        label: tAuth('tab.apikey'),
-      },
-      {
-        icon: EllipsisIcon,
-        key: SettingsTabs.Advanced,
-        label: t('tab.advanced'),
-      },
-      !hideDocs && {
-        icon: Info,
-        key: SettingsTabs.About,
-        label: t('tab.about'),
-      },
-    ].filter(Boolean) as CategoryItem[];
+    // System group (admin only)
+    if (isAdmin) {
+      const systemItems: CategoryItem[] = [
+        isDesktop && {
+          icon: EthernetPort,
+          key: SettingsTabs.Proxy,
+          label: t('tab.proxy'),
+        },
+        isDesktop && {
+          icon: TerminalSquare,
+          key: SettingsTabs.SystemTools,
+          label: t('tab.systemTools'),
+        },
+        {
+          icon: Database,
+          key: SettingsTabs.Storage,
+          label: t('tab.storage'),
+        },
+        isDevMode && {
+          icon: KeyIcon,
+          key: SettingsTabs.APIKey,
+          label: tAuth('tab.apikey'),
+        },
+        {
+          icon: EllipsisIcon,
+          key: SettingsTabs.Advanced,
+          label: t('tab.advanced'),
+        },
+        !hideDocs && {
+          icon: Info,
+          key: SettingsTabs.About,
+          label: t('tab.about'),
+        },
+      ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: systemItems,
-      key: SettingsGroupKey.System,
-      title: t('group.system'),
-    });
+      groups.push({
+        items: systemItems,
+        key: SettingsGroupKey.System,
+        title: t('group.system'),
+      });
+    }
+
+    // Admin group — shown inline in Settings for admin users
+    if (isAdmin) {
+      const adminItems: CategoryItem[] = [
+        { icon: Package, key: SettingsTabs.AdminPlans, label: '套餐管理' },
+        { icon: Rocket, key: SettingsTabs.AdminBoostPackTemplates, label: '加油包管理' },
+        { icon: Users, key: SettingsTabs.AdminUsers, label: '用户管理' },
+        { icon: Rocket, key: SettingsTabs.AdminBoostPacks, label: '加油包发放' },
+        { icon: Layout, key: SettingsTabs.AdminSidebar, label: '侧栏菜单' },
+        { icon: Sparkles, key: SettingsTabs.AdminSkills, label: '技能开放' },
+        { icon: UserCog, key: SettingsTabs.AdminAdmins, label: '管理员' },
+      ];
+
+      groups.push({
+        items: adminItems,
+        key: SettingsGroupKey.Admin,
+        title: '后台管理',
+      });
+    }
 
     return groups;
   }, [
@@ -224,6 +260,7 @@ export const useCategory = () => {
     isDevMode,
     avatarUrl,
     username,
+    isAdmin,
   ]);
 
   return categoryGroups;

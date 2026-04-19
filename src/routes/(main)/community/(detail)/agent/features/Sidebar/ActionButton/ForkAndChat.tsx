@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@lobehub/ui';
-import { App } from 'antd';
+import { App, Space } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { customAlphabet } from 'nanoid/non-secure';
 import { memo, useState } from 'react';
@@ -9,10 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { SESSION_CHAT_URL } from '@/const/url';
-import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
 import { agentService } from '@/services/agent';
 import { discoverService } from '@/services/discover';
-import { marketApiService } from '@/services/marketApi';
 import { useAgentStore } from '@/store/agent';
 import { useHomeStore } from '@/store/home';
 
@@ -24,9 +22,6 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-/**
- * Generate a market identifier (8-character lowercase alphanumeric string)
- */
 const generateMarketIdentifier = () => {
   const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
   const generate = customAlphabet(alphabet, 8);
@@ -36,13 +31,12 @@ const generateMarketIdentifier = () => {
 const ForkAndChat = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { identifier, title, config, avatar, backgroundColor, description, tags, editorData } =
     useDetailContext();
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMode, setLoadingMode] = useState<'none' | 'add' | 'chat'>('none');
   const createAgent = useAgentStore((s) => s.createAgent);
   const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { t } = useTranslation('discover');
-  const { isAuthenticated, signIn } = useMarketAuth();
 
   const meta = {
     avatar,
@@ -53,91 +47,80 @@ const ForkAndChat = memo<{ mobile?: boolean }>(({ mobile }) => {
     title,
   };
 
-  const handleForkAndChat = async () => {
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      try {
-        await signIn();
-      } catch {
-        return;
-      }
-    }
-
+  const handleFork = async (navigateAfter: boolean) => {
     try {
-      setIsLoading(true);
+      setLoadingMode(navigateAfter ? 'chat' : 'add');
 
-      // Step 1: Check if user has already forked this agent
       const existingAgentId = await agentService.getAgentByForkedFromIdentifier(identifier!);
 
       if (existingAgentId) {
-        // User has already forked this agent, navigate to existing fork
         message.info(t('fork.alreadyForked'));
-        navigate(SESSION_CHAT_URL(existingAgentId, mobile));
+        if (navigateAfter) navigate(SESSION_CHAT_URL(existingAgentId, mobile));
         return;
       }
 
-      // Generate a unique identifier for the forked agent
-      const newIdentifier = generateMarketIdentifier();
-
-      // Step 2: Fork the agent via Market API
-      const forkResult = await marketApiService.forkAgent(identifier!, {
-        identifier: newIdentifier,
-        name: title,
-        status: 'published',
-        visibility: 'public',
-      });
-
-      // Step 3: Create agent config with forked data
       if (!config) throw new Error('Agent config is missing');
+
+      const newIdentifier = generateMarketIdentifier();
 
       const agentData = {
         config: {
           ...config,
           editorData,
           ...meta,
-          marketIdentifier: forkResult.agent.identifier,
+          marketIdentifier: newIdentifier,
           params: {
             ...config.params,
-            forkedFromIdentifier: identifier, // Store the source agent identifier
+            forkedFromIdentifier: identifier,
           },
-          title: forkResult.agent.name,
+          title,
         },
       };
 
-      // Step 4: Add to local agent list
       const result = await createAgent(agentData);
       await refreshAgentList();
 
-      // Step 5: Report fork event (using 'add' event type)
       discoverService.reportAgentEvent({
         event: 'add',
-        identifier: forkResult.agent.identifier,
+        identifier: newIdentifier,
         source: location.pathname,
       });
 
       message.success(t('fork.success'));
 
-      // Step 6: Navigate to chat
-      navigate(SESSION_CHAT_URL(result!.agentId, mobile));
+      if (navigateAfter && result?.agentId) {
+        navigate(SESSION_CHAT_URL(result.agentId, mobile));
+      }
     } catch (error: any) {
       console.error('Fork failed:', error);
       message.error(t('fork.failed'));
     } finally {
-      setIsLoading(false);
+      setLoadingMode('none');
     }
   };
 
   return (
-    <Button
-      block
-      className={styles.buttonGroup}
-      loading={isLoading}
-      size={'large'}
-      type={'primary'}
-      onClick={handleForkAndChat}
-    >
-      {t('fork.forkAndChat')}
-    </Button>
+    <Space className={styles.buttonGroup} direction={'vertical'} style={{ width: '100%' }}>
+      <Button
+        block
+        disabled={loadingMode === 'chat'}
+        loading={loadingMode === 'add'}
+        size={'large'}
+        onClick={() => handleFork(false)}
+      >
+        {t('fork.addAgent' as any)}
+      </Button>
+      <Button
+        block
+        disabled={loadingMode === 'add'}
+        loading={loadingMode === 'chat'}
+        size={'large'}
+        type={'primary'}
+        onClick={() => handleFork(true)}
+      >
+        {t('fork.forkAndChat')}
+      </Button>
+    </Space>
   );
 });
 

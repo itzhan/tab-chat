@@ -13,6 +13,7 @@ export enum SidebarTabKey {
   Image = 'image',
   Knowledge = 'knowledge',
   Me = 'me',
+  Membership = 'membership',
   Memory = 'memory',
   Pages = 'pages',
   Resource = 'resource',
@@ -39,6 +40,14 @@ export enum GroupSettingsTabs {
 
 export enum SettingsTabs {
   About = 'about',
+  // Admin-only tabs (moved from /admin/*)
+  AdminAdmins = 'admin-admins',
+  AdminBoostPacks = 'admin-boost-packs',
+  AdminBoostPackTemplates = 'admin-boost-pack-templates',
+  AdminPlans = 'admin-plans',
+  AdminSidebar = 'admin-sidebar',
+  AdminSkills = 'admin-skills',
+  AdminUsers = 'admin-users',
   Advanced = 'advanced',
   /** @deprecated Use ServiceModel instead */
   Agent = 'agent',
@@ -56,8 +65,9 @@ export enum SettingsTabs {
   Image = 'image',
   LLM = 'llm',
   Memory = 'memory',
-  Notification = 'notification',
   // business
+  MySubscription = 'my-subscription',
+  Notification = 'notification',
   Plans = 'plans',
   Profile = 'profile',
   Provider = 'provider',
@@ -268,7 +278,7 @@ export const INITIAL_STATUS = {
   imageTopicViewMode: 'grid' as const,
   imageTopicPanelWidth: 80,
   knowledgeBaseModalViewMode: 'list' as const,
-  leftPanelWidth: 320,
+  leftPanelWidth: 240,
   mobileShowTopic: false,
   modelSwitchPanelGroupMode: 'byProvider',
   modelSwitchPanelWidth: 460,

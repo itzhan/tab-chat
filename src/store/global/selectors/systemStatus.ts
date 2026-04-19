@@ -24,12 +24,12 @@ const hiddenSidebarSections = (s: GlobalState): string[] =>
   s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
 
 export const DEFAULT_SIDEBAR_ITEMS: string[] = [
-  'pages',
-  'recents',
-  'agent',
   'community',
+  'image',
+  'video',
   'resource',
-  'memory',
+  'membership',
+  'agent',
 ];
 
 /** Items that must stay contiguous in the sidebar list (accordion block). */
