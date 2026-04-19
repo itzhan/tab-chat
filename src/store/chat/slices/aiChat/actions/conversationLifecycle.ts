@@ -38,6 +38,7 @@ import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { type StoreSetter } from '@/store/types';
 import { useUserMemoryStore } from '@/store/userMemory';
+import { translateQuotaError } from '@/utils/quotaErrorMessage';
 
 import { dbMessageSelectors, displayMessageSelectors, topicSelectors } from '../../../selectors';
 import { messageMapKey } from '../../../utils/messageMapKey';
@@ -643,7 +644,9 @@ export class ConversationLifecycleActionImpl {
         const isAbort = e.message.includes('aborted') || e.name === 'AbortError';
         // Check if error is due to cancellation
         if (!isAbort) {
-          this.#get().updateOperationMetadata(operationId, { inputSendErrorMsg: e.message });
+          this.#get().updateOperationMetadata(operationId, {
+            inputSendErrorMsg: translateQuotaError(e.message) ?? e.message,
+          });
           const op = this.#get().operations[operationId];
           if (op?.metadata.inputEditorTempState) {
             this.#get().mainInputEditor?.setJSONState(op.metadata.inputEditorTempState);

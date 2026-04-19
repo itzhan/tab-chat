@@ -20,6 +20,7 @@ import { fileChatSelectors, useFileStore } from '@/store/file';
 
 import WideScreenContainer from '../../WideScreenContainer';
 import InterventionBar from '../InterventionBar';
+import QuotaBadge from '../QuotaBadge';
 import {
   dataSelectors,
   messageStateSelectors,
@@ -240,12 +241,29 @@ const ChatInput = memo<ChatInputProps>(
           <InterventionBar interventions={pendingInterventions} />
         ) : (
           <>
+            <Flexbox
+              horizontal
+              align="center"
+              justify="flex-end"
+              paddingBlock={'0 4px'}
+              paddingInline={12}
+            >
+              <QuotaBadge />
+            </Flexbox>
             {sendMessageErrorMsg && (
               <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
                 <Alert
                   closable
-                  title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
-                  type={'secondary'}
+                  type={
+                    /已用完|未开通|未绑定|套餐|空间/.test(sendMessageErrorMsg)
+                      ? 'warning'
+                      : 'secondary'
+                  }
+                  title={
+                    /已用完|未开通|未绑定|套餐|空间/.test(sendMessageErrorMsg)
+                      ? sendMessageErrorMsg
+                      : t('input.errorMsg', { errorMsg: sendMessageErrorMsg })
+                  }
                   onClose={clearSendMessageError}
                 />
               </Flexbox>

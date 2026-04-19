@@ -13,6 +13,7 @@ import { usePanelSize } from '../hooks/usePanelSize';
 import { usePanelState } from '../hooks/usePanelState';
 import { List } from './List';
 import type { PricingMode } from './ModelDetailPanel';
+import { ModelQuotaProvider } from './ModelQuotaProvider';
 import { Toolbar } from './Toolbar';
 
 interface PanelContentProps {
@@ -41,7 +42,7 @@ export const PanelContent: FC<PanelContentProps> = ({
   const { groupMode, handleGroupModeChange } = usePanelState();
   const { panelHeight, panelWidth, handlePanelWidthChange } = usePanelSize(enabledList.length);
 
-  const content = (
+  const contentInner = (
     <>
       <Toolbar
         groupMode={groupMode}
@@ -63,6 +64,8 @@ export const PanelContent: FC<PanelContentProps> = ({
       />
     </>
   );
+
+  const content = <ModelQuotaProvider enabledList={enabledList}>{contentInner}</ModelQuotaProvider>;
 
   if (isDevMode) {
     return (

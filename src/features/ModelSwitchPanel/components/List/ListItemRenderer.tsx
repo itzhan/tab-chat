@@ -25,6 +25,7 @@ import { styles } from '../../styles';
 import { type ListItem } from '../../types';
 import { menuKey } from '../../utils';
 import ModelDetailPanel from '../ModelDetailPanel';
+import ModelQuotaBadge from '../ModelQuotaBadge';
 import { MultipleProvidersModelItem } from './MultipleProvidersModelItem';
 import { SingleProviderModelItem } from './SingleProviderModelItem';
 
@@ -158,6 +159,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                     showInfoTag
                     newBadgeLabel={newLabel}
                   />
+                  <ModelQuotaBadge modelId={item.model.id} providerId={item.provider.id} />
                 </DropdownMenuSubmenuTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
@@ -195,6 +197,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   newBadgeLabel={newLabel}
                   proBadgeLabel={restricted ? proLabel : undefined}
                 />
+                <ModelQuotaBadge modelId={item.model.id} providerId={item.provider.id} />
               </DropdownMenuSubmenuTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>

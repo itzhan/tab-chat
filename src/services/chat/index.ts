@@ -407,7 +407,49 @@ class ChatService {
        */
       fetcher = async () => {
         try {
-          return await this.fetchOnClient({ payload, provider, runtimeProvider: sdkType, signal });
+          const res = await this.fetchOnClient({
+            payload,
+            provider,
+            runtimeProvider: sdkType,
+            signal,
+          });
+
+          // Commercial quota: record ONLY when the stream completes successfully.
+          // Wrap the body so `flush` fires on normal end; user aborts / network errors /
+          // upstream error events skip the deduction.
+          if (res.ok && res.body) {
+            let sawErrorPayload = false;
+            const monitored = res.body.pipeThrough(
+              new TransformStream<Uint8Array, Uint8Array>({
+                transform(chunk, controller) {
+                  controller.enqueue(chunk);
+                  try {
+                    const text = new TextDecoder().decode(chunk);
+                    if (/^event:\s*error\b/m.test(text)) sawErrorPayload = true;
+                  } catch {
+                    /* ignore decode errors */
+                  }
+                },
+                flush() {
+                  if (sawErrorPayload) return;
+                  import('@/services/subscription')
+                    .then(({ subscriptionService }) =>
+                      subscriptionService.recordClientSideUsage(provider, payload.model),
+                    )
+                    .catch(() => {
+                      /* ignore */
+                    });
+                },
+              }),
+            );
+            return new Response(monitored, {
+              headers: res.headers,
+              status: res.status,
+              statusText: res.statusText,
+            });
+          }
+
+          return res;
         } catch (e) {
           const {
             errorType = ChatErrorType.BadRequest,
