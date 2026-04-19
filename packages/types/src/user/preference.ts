@@ -108,6 +108,11 @@ export interface UserInitializationState {
    * Referral lifecycle status for the current user (invitee side).
    */
   referralStatus?: ReferralStatusString;
+  /**
+   * Role of the current user ('admin' for platform administrators).
+   * Used to gate access to /admin routes on the client.
+   */
+  role?: string;
   settings: PartialDeep<UserSettings>;
   subscriptionPlan?: Plans;
   userId?: string;

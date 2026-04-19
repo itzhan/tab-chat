@@ -10,6 +10,7 @@ import { TopicModel } from '@/database/models/topic';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { checkMessageQuota } from '@/server/modules/QuotaGuard';
 import { resolveContext } from '@/server/routers/lambda/_helpers/resolveContext';
 import { AiChatService } from '@/server/services/aiChat';
 import { FileService } from '@/server/services/file';
@@ -66,6 +67,17 @@ export const aiChatRouter = router({
         input.newTopic,
         input.newThread,
       );
+
+      // ===== Commercial quota guard =====
+      // Only PRE-check here (fail fast before creating messages).
+      // The actual increment happens on successful chat() in /webapi/chat/[provider]
+      // so that failed AI calls do NOT consume quota.
+      const quotaProvider = input.newAssistantMessage.provider;
+      const quotaModel = input.newAssistantMessage.model;
+      if (quotaProvider && quotaModel) {
+        await checkMessageQuota(ctx.serverDB, ctx.userId, quotaProvider, quotaModel);
+      }
+
       let sessionId = input.sessionId;
       if (!sessionId) {
         const context = await resolveContext(input, ctx.serverDB, ctx.userId);
@@ -204,6 +216,9 @@ export const aiChatRouter = router({
       });
 
       log('retrieved %d messages, %d topics', messages.length, topics?.items?.length ?? 0);
+
+      // NOTE: quota increment moved to /webapi/chat/[provider] so that failed
+      // AI calls don't consume quota.
 
       return {
         assistantMessageId: assistantMessageItem.id,

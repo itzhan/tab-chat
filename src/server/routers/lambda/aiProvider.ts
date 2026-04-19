@@ -2,11 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { AiProviderModel } from '@/database/models/aiProvider';
+import { AppSettingsModel } from '@/database/models/appSettings';
 import { UserModel } from '@/database/models/user';
 import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
+import { getPrimaryAdminUserId } from '@/server/modules/Admin/getPrimaryAdminUserId';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { type AiProviderDetailItem, type AiProviderRuntimeState } from '@/types/aiProvider';
@@ -17,25 +19,50 @@ import {
 } from '@/types/aiProvider';
 import { type ProviderConfig } from '@/types/user/settings';
 
+/**
+ * For non-admin callers, substitute the config owner with the primary admin so that
+ * queries return the shared provider configuration. Mutations below are guarded by
+ * an explicit admin check — users cannot edit shared config.
+ */
+const resolveConfigOwnerId = async (
+  db: Parameters<typeof getPrimaryAdminUserId>[0],
+  callerUserId: string,
+): Promise<{ ownerId: string; callerIsAdmin: boolean }> => {
+  const callerUser = await UserModel.findById(db, callerUserId);
+  const callerIsAdmin = callerUser?.role === 'admin';
+  if (callerIsAdmin) return { callerIsAdmin, ownerId: callerUserId };
+  const adminId = await getPrimaryAdminUserId(db);
+  return { callerIsAdmin, ownerId: adminId ?? callerUserId };
+};
+
 const aiProviderProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
 
   const { aiProvider } = await getServerGlobalConfig();
 
+  const { ownerId, callerIsAdmin } = await resolveConfigOwnerId(ctx.serverDB, ctx.userId);
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
   return opts.next({
     ctx: {
       aiInfraRepos: new AiInfraRepos(
         ctx.serverDB,
-        ctx.userId,
+        ownerId,
         aiProvider as Record<string, ProviderConfig>,
       ),
-      aiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId),
+      aiProviderModel: new AiProviderModel(ctx.serverDB, ownerId),
+      callerIsAdmin,
+      configOwnerId: ownerId,
       gateKeeper,
       userModel: new UserModel(ctx.serverDB, ctx.userId),
     },
   });
 });
+
+const requireAdmin = (ctx: { callerIsAdmin: boolean }) => {
+  if (!ctx.callerIsAdmin) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'admin only' });
+  }
+};
 
 export const aiProviderRouter = router({
   checkProviderConnectivity: aiProviderProcedure
@@ -46,6 +73,7 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       // Get the provider detail to find checkModel
       const detail = await ctx.aiInfraRepos.getAiProviderDetail(
         input.id,
@@ -88,6 +116,7 @@ export const aiProviderRouter = router({
   createAiProvider: aiProviderProcedure
     .input(CreateAiProviderSchema)
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       try {
         const data = await ctx.aiProviderModel.create(input, ctx.gateKeeper.encrypt);
         return data?.id;
@@ -117,12 +146,36 @@ export const aiProviderRouter = router({
   getAiProviderRuntimeState: aiProviderProcedure
     .input(z.object({ isLogin: z.boolean().optional() }))
     .query(async ({ ctx }): Promise<AiProviderRuntimeState> => {
-      return ctx.aiInfraRepos.getAiProviderRuntimeState(KeyVaultsGateKeeper.getUserKeyVaults);
+      const state = await ctx.aiInfraRepos.getAiProviderRuntimeState(
+        KeyVaultsGateKeeper.getUserKeyVaults,
+      );
+
+      // For non-admin users: decide whether the admin's API keys may flow down
+      // to the browser for client-mode fetch. Off by default (safer). Operators
+      // in restricted-network environments can turn this on via /admin/settings.
+      if (!ctx.callerIsAdmin && state?.runtimeConfig) {
+        const allowClient = await new AppSettingsModel(ctx.serverDB).getAllowUsersClientFetch();
+
+        if (!allowClient) {
+          // Strip keys AND force server mode — the admin's key stays on server.
+          for (const key of Object.keys(state.runtimeConfig)) {
+            const cfg = state.runtimeConfig[key];
+            if (cfg) cfg.fetchOnClient = false;
+          }
+        }
+        // When allowClient=true: leave keyVaults and fetchOnClient intact so the
+        // browser can call the provider directly with admin's key. The admin
+        // assumes the responsibility of deciding this is acceptable for their
+        // deployment (e.g. trusted internal users behind a VPN, or a GFW/proxy
+        // situation where only the client-side has outbound access).
+      }
+      return state;
     }),
 
   removeAiProvider: aiProviderProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       return ctx.aiProviderModel.delete(input.id);
     }),
 
@@ -134,6 +187,7 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       return ctx.aiProviderModel.toggleProviderEnabled(input.id, input.enabled);
     }),
 
@@ -145,6 +199,7 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       return ctx.aiProviderModel.update(input.id, input.value);
     }),
 
@@ -156,6 +211,7 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       return ctx.aiProviderModel.updateConfig(
         input.id,
         input.value,
@@ -176,6 +232,7 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdmin(ctx);
       return ctx.aiProviderModel.updateOrder(input.sortMap);
     }),
 });

@@ -21,10 +21,12 @@ export const userProfileSelectors = {
   email: (s: UserStore): string => s.user?.email || '',
   fullName: (s: UserStore): string => s.user?.fullName || '',
   interests: (s: UserStore): string[] => s.user?.interests || [],
+  isAdmin: (s: UserStore): boolean => s.role === 'admin',
   nickName,
   userAvatar: (s: UserStore): string => s.user?.avatar || '',
   userId: (s: UserStore) => s.user?.id,
   userProfile: (s: UserStore): LobeUser | null | undefined => s.user,
+  userRole: (s: UserStore): string | undefined => s.role,
   username,
 };
 

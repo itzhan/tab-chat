@@ -1108,7 +1108,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
         store: false,
         stream: !isStreaming ? undefined : isStreaming,
         tools: tools?.map((tool) => this.convertChatCompletionToolToResponseTool(tool)),
-        user: options?.user,
+        // user: options?.user, // disabled: tabcode proxy mis-injects `action` when `user` is present
         // Sanitize sampling params for Responses API path
         ...resolveModelSamplingParameters(res.model, res, {
           normalizeTemperature: false,

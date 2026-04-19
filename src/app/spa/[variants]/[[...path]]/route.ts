@@ -88,7 +88,12 @@ globalThis.Worker.prototype=O.prototype;
 
 async function getTemplate(isMobile: boolean): Promise<string> {
   if (isDev) {
-    const res = await fetch(VITE_DEV_ORIGIN);
+    // Dev-only: bypass HTTP_PROXY for localhost Vite server (some users have Clash / VPN
+    // setting HTTP_PROXY shell env that undici's global dispatcher respects).
+    const undici = await import('undici');
+    const res = await undici.fetch(VITE_DEV_ORIGIN, {
+      dispatcher: new undici.Agent(),
+    } as any);
     const html = await res.text();
     return rewriteViteAssetUrls(html);
   }

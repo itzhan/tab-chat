@@ -11,7 +11,9 @@
 import { openTelemetry } from '../middleware/openTelemetry';
 import { userAuth } from '../middleware/userAuth';
 import { trpc } from './init';
+import { adminAuth } from './middleware/adminAuth';
 import { oidcAuth } from './middleware/oidcAuth';
+import { serverDatabase } from './middleware/serverDatabase';
 
 /**
  * Create a router
@@ -29,6 +31,9 @@ export const publicProcedure = baseProcedure;
 
 // procedure that asserts that the user is logged in
 export const authedProcedure = baseProcedure.use(oidcAuth).use(userAuth);
+
+// procedure that asserts that the user is an admin (role = 'admin')
+export const adminProcedure = authedProcedure.use(serverDatabase).use(adminAuth);
 
 /**
  * Create a server-side caller

@@ -8,6 +8,10 @@ import { subscriptionRouter } from '@/business/server/lambda-routers/subscriptio
 import { topUpRouter } from '@/business/server/lambda-routers/topUp';
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 
+import { adminAppSettingsRouter } from './adminAppSettings';
+import { adminBoostPacksRouter } from './adminBoostPacks';
+import { adminPlansRouter } from './adminPlans';
+import { adminUsersRouter } from './adminUsers';
 import { agentRouter } from './agent';
 import { agentBotProviderRouter } from './agentBotProvider';
 import { agentCronJobRouter } from './agentCronJob';
@@ -63,6 +67,10 @@ import { userMemoryRouter } from './userMemory';
 import { videoRouter } from './video';
 
 export const lambdaRouter = router({
+  adminAppSettings: adminAppSettingsRouter,
+  adminBoostPacks: adminBoostPacksRouter,
+  adminPlans: adminPlansRouter,
+  adminUsers: adminUsersRouter,
   agent: agentRouter,
   agentBotProvider: agentBotProviderRouter,
   agentNotify: agentNotifyRouter,

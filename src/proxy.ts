@@ -30,6 +30,8 @@ export const config = {
     '/me',
     '/me(.*)',
     '/share(.*)',
+    '/admin',
+    '/admin(.*)',
 
     '/onboarding',
     '/onboarding(.*)',

@@ -1,6 +1,7 @@
 import { type LobeTool } from '@lobechat/types';
 import { z } from 'zod';
 
+import { AppSettingsModel } from '@/database/models/appSettings';
 import { PluginModel } from '@/database/models/plugin';
 import { getServerDB } from '@/database/server';
 import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
@@ -72,7 +73,34 @@ export const pluginRouter = router({
     const serverDB = await getServerDB();
     const pluginModel = new PluginModel(serverDB, ctx.userId);
 
-    return pluginModel.query();
+    const [userPlugins, globalEntries] = await Promise.all([
+      pluginModel.query(),
+      new AppSettingsModel(serverDB).getGlobalPluginList(),
+    ]);
+
+    // Merge admin-curated global plugins — user sees them alongside their own, with
+    // admin-overridden title/description applied. Identifier collisions prefer user entry.
+    const existingIds = new Set(userPlugins.map((p) => p.identifier));
+    const synthetic: LobeTool[] = globalEntries
+      .filter((g) => !existingIds.has(g.identifier))
+      .map(
+        (g) =>
+          ({
+            author: 'admin',
+            createdAt: '',
+            customParams: {},
+            description: g.displayDescription ?? g.manifest?.meta?.description ?? '',
+            homepage: '',
+            identifier: g.identifier,
+            manifest: g.manifest ?? { identifier: g.identifier, type: g.type },
+            settings: {},
+            title: g.displayTitle ?? g.manifest?.meta?.title ?? g.identifier,
+            type: g.type === 'mcp' ? 'plugin' : 'plugin',
+            updatedAt: '',
+          }) as any,
+      );
+
+    return [...userPlugins, ...synthetic];
   }),
 
   removeAllPlugins: pluginProcedure.mutation(async ({ ctx }) => {

@@ -18,6 +18,7 @@ import { getBusinessModelRuntimeHooks } from '@/business/server/model-runtime';
 import { AiProviderModel } from '@/database/models/aiProvider';
 import { type LobeChatDatabase } from '@/database/type';
 import { getLLMConfig } from '@/envs/llm';
+import { getPrimaryAdminUserId } from '@/server/modules/Admin/getPrimaryAdminUserId';
 
 import { KeyVaultsGateKeeper } from '../KeyVaultsEncrypt';
 import apiKeyManager from './apiKeyManager';
@@ -402,8 +403,20 @@ export const initModelRuntimeFromDB = async (
   userId: string,
   provider: string,
 ): Promise<ModelRuntime> => {
+  // Commercial override: for shared-provider mode, read config from the primary admin.
+  // This makes every user share a single centrally-administered set of API keys
+  // instead of each user providing their own. We still bill usage/hooks against the
+  // calling user (via `userId` passed into hooks below).
+  let configOwnerId = userId;
+  try {
+    const adminId = await getPrimaryAdminUserId(db);
+    if (adminId) configOwnerId = adminId;
+  } catch {
+    // ignore — fall back to caller
+  }
+
   // 1. Get user's provider configuration from database
-  const aiProviderModel = new AiProviderModel(db, userId);
+  const aiProviderModel = new AiProviderModel(db, configOwnerId);
 
   // Use getAiProviderById with KeyVaultsGateKeeper.getUserKeyVaults as decryptor
   const providerConfig = await aiProviderModel.getAiProviderById(

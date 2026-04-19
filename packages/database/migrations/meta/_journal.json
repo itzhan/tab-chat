@@ -693,6 +693,27 @@
       "when": 1776234919716,
       "tag": "0098_add_document_history",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1776240000000,
+      "tag": "0099_add_subscription",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1776240100000,
+      "tag": "0100_add_app_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1776240200000,
+      "tag": "0101_boost_pack_multi_model",
+      "breakpoints": true
     }
   ],
   "version": "6"

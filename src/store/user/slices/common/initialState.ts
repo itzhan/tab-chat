@@ -9,6 +9,10 @@ export interface CommonState {
   isUserHasConversation: boolean;
   isUserStateInit: boolean;
   referralStatus?: ReferralStatusString;
+  /**
+   * Current user's role. 'admin' unlocks /admin routes.
+   */
+  role?: string;
   subscriptionPlan?: Plans;
 }
 

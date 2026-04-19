@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { type AiProviderModelListItem } from 'model-bank';
 import {
   AiModelTypeSchema,
@@ -13,6 +14,7 @@ import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
+import { getPrimaryAdminUserId } from '@/server/modules/Admin/getPrimaryAdminUserId';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { type ProviderConfig } from '@/types/user/settings';
 
@@ -22,19 +24,34 @@ const aiModelProcedure = authedProcedure.use(serverDatabase).use(async (opts) =>
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
   const { aiProvider } = await getServerGlobalConfig();
 
+  // Shared-config: non-admin users read admin's provider/model configuration.
+  const callerUser = await UserModel.findById(ctx.serverDB, ctx.userId);
+  const callerIsAdmin = callerUser?.role === 'admin';
+  const ownerId = callerIsAdmin
+    ? ctx.userId
+    : ((await getPrimaryAdminUserId(ctx.serverDB)) ?? ctx.userId);
+
   return opts.next({
     ctx: {
       aiInfraRepos: new AiInfraRepos(
         ctx.serverDB,
-        ctx.userId,
+        ownerId,
         aiProvider as Record<string, ProviderConfig>,
       ),
-      aiModelModel: new AiModelModel(ctx.serverDB, ctx.userId),
+      aiModelModel: new AiModelModel(ctx.serverDB, ownerId),
+      callerIsAdmin,
+      configOwnerId: ownerId,
       gateKeeper,
       userModel: new UserModel(ctx.serverDB, ctx.userId),
     },
   });
 });
+
+const requireAdminModel = (ctx: { callerIsAdmin: boolean }) => {
+  if (!ctx.callerIsAdmin) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'admin only' });
+  }
+};
 
 export const aiModelRouter = router({
   batchToggleAiModels: aiModelProcedure
@@ -46,6 +63,7 @@ export const aiModelRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.batchToggleAiModels(input.id, input.models, input.enabled);
     }),
   batchUpdateAiModels: aiModelProcedure
@@ -57,21 +75,25 @@ export const aiModelRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.batchUpdateAiModels(input.id, input.models);
     }),
 
   clearModelsByProvider: aiModelProcedure
     .input(z.object({ providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.clearModelsByProvider(input.providerId);
     }),
   clearRemoteModels: aiModelProcedure
     .input(z.object({ providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.clearRemoteModels(input.providerId);
     }),
 
   createAiModel: aiModelProcedure.input(CreateAiModelSchema).mutation(async ({ input, ctx }) => {
+    requireAdminModel(ctx);
     const data = await ctx.aiModelModel.create(input);
 
     return data?.id;
@@ -106,12 +128,14 @@ export const aiModelRouter = router({
   removeAiModel: aiModelProcedure
     .input(z.object({ id: z.string(), providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.delete(input.id, input.providerId);
     }),
 
   toggleModelEnabled: aiModelProcedure
     .input(ToggleAiModelEnableSchema)
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.toggleModelEnabled(input);
     }),
 
@@ -124,6 +148,7 @@ export const aiModelRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.update(input.id, input.providerId, input.value);
     }),
 
@@ -141,6 +166,7 @@ export const aiModelRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      requireAdminModel(ctx);
       return ctx.aiModelModel.updateModelsOrder(input.providerId, input.sortMap);
     }),
 });

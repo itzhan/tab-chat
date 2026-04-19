@@ -13,6 +13,15 @@ import ImagePage from '@/routes/(main)/(create)/image';
 import DesktopImageLayout from '@/routes/(main)/(create)/image/_layout';
 import VideoPage from '@/routes/(main)/(create)/video';
 import DesktopVideoLayout from '@/routes/(main)/(create)/video/_layout';
+import AdminHome from '@/routes/(main)/admin';
+import AdminLayout from '@/routes/(main)/admin/_layout';
+import AdminAdminsPage from '@/routes/(main)/admin/admins';
+import AdminBoostPacksPage from '@/routes/(main)/admin/boost-packs';
+import AdminPlansPage from '@/routes/(main)/admin/plans';
+import AdminProvidersRedirect from '@/routes/(main)/admin/providers';
+import AdminSidebarPage from '@/routes/(main)/admin/sidebar';
+import AdminSkillsPage from '@/routes/(main)/admin/skills';
+import AdminUsersPage from '@/routes/(main)/admin/users';
 // Pages — sync import
 import AgentPage from '@/routes/(main)/agent';
 import DesktopChatLayout from '@/routes/(main)/agent/_layout';
@@ -23,22 +32,16 @@ import CommunityLayout from '@/routes/(main)/community/_layout';
 import CommunityDetailLayout from '@/routes/(main)/community/(detail)/_layout';
 import CommunityDetailAgentPage from '@/routes/(main)/community/(detail)/agent';
 import CommunityDetailGroupAgentPage from '@/routes/(main)/community/(detail)/group_agent';
-import CommunityDetailMcpPage from '@/routes/(main)/community/(detail)/mcp';
 import CommunityDetailModelPage from '@/routes/(main)/community/(detail)/model';
 import CommunityDetailProviderPage from '@/routes/(main)/community/(detail)/provider';
-import CommunityDetailSkillPage from '@/routes/(main)/community/(detail)/skill';
 import CommunityDetailUserPage from '@/routes/(main)/community/(detail)/user';
 import CommunityListLayout from '@/routes/(main)/community/(list)/_layout';
 import CommunityListHomePage from '@/routes/(main)/community/(list)/(home)';
 import CommunityListAgentPage from '@/routes/(main)/community/(list)/agent';
 import CommunityListAgentLayout from '@/routes/(main)/community/(list)/agent/_layout';
-import CommunityListMcpPage from '@/routes/(main)/community/(list)/mcp';
-import CommunityListMcpLayout from '@/routes/(main)/community/(list)/mcp/_layout';
 import CommunityListModelPage from '@/routes/(main)/community/(list)/model';
 import CommunityListModelLayout from '@/routes/(main)/community/(list)/model/_layout';
 import CommunityListProviderPage from '@/routes/(main)/community/(list)/provider';
-import CommunityListSkillPage from '@/routes/(main)/community/(list)/skill';
-import CommunityListSkillLayout from '@/routes/(main)/community/(list)/skill/_layout';
 import EvalOverviewPage from '@/routes/(main)/eval';
 import EvalLayout from '@/routes/(main)/eval/_layout';
 import EvalHomeLayout from '@/routes/(main)/eval/(home)/_layout';
@@ -50,6 +53,8 @@ import EvalCaseDetailPage from '@/routes/(main)/eval/bench/[benchmarkId]/runs/[r
 import GroupPage from '@/routes/(main)/group';
 import DesktopGroupLayout from '@/routes/(main)/group/_layout';
 import GroupProfilePage from '@/routes/(main)/group/profile';
+import MembershipLayout from '@/routes/(main)/membership/_layout';
+import MembershipHomePage from '@/routes/(main)/membership/(home)';
 import DesktopMemoryLayout from '@/routes/(main)/memory/_layout';
 import MemoryHomePage from '@/routes/(main)/memory/(home)';
 import MemoryActivitiesPage from '@/routes/(main)/memory/activities';
@@ -168,26 +173,6 @@ export const desktopRoutes: RouteObject[] = [
                 path: 'provider',
               },
               {
-                children: [
-                  {
-                    element: <CommunityListSkillPage />,
-                    index: true,
-                  },
-                ],
-                element: <CommunityListSkillLayout />,
-                path: 'skill',
-              },
-              {
-                children: [
-                  {
-                    element: <CommunityListMcpPage />,
-                    index: true,
-                  },
-                ],
-                element: <CommunityListMcpLayout />,
-                path: 'mcp',
-              },
-              {
                 element: <CommunityListHomePage />,
                 index: true,
               },
@@ -212,14 +197,6 @@ export const desktopRoutes: RouteObject[] = [
               {
                 element: <CommunityDetailProviderPage />,
                 path: 'provider/:slug',
-              },
-              {
-                element: <CommunityDetailSkillPage />,
-                path: 'skill/:slug',
-              },
-              {
-                element: <CommunityDetailMcpPage />,
-                path: 'mcp/:slug',
               },
               {
                 element: <CommunityDetailUserPage />,
@@ -268,6 +245,19 @@ export const desktopRoutes: RouteObject[] = [
         path: 'resource',
       },
 
+      // Membership routes
+      {
+        children: [
+          {
+            element: <MembershipHomePage />,
+            index: true,
+          },
+        ],
+        element: <MembershipLayout />,
+        errorElement: <ErrorBoundary resetPath="/membership" />,
+        path: 'membership',
+      },
+
       // Settings routes
       {
         children: [
@@ -299,6 +289,23 @@ export const desktopRoutes: RouteObject[] = [
         element: <SettingsLayout />,
         errorElement: <ErrorBoundary resetPath="/settings" />,
         path: 'settings',
+      },
+
+      // Admin console routes
+      {
+        children: [
+          { element: <AdminHome />, index: true },
+          { element: <AdminPlansPage />, path: 'plans' },
+          { element: <AdminUsersPage />, path: 'users' },
+          { element: <AdminBoostPacksPage />, path: 'boost-packs' },
+          { element: <AdminProvidersRedirect />, path: 'providers' },
+          { element: <AdminSidebarPage />, path: 'sidebar' },
+          { element: <AdminSkillsPage />, path: 'skills' },
+          { element: <AdminAdminsPage />, path: 'admins' },
+        ],
+        element: <AdminLayout />,
+        errorElement: <ErrorBoundary resetPath="/admin" />,
+        path: 'admin',
       },
 
       // Memory routes
