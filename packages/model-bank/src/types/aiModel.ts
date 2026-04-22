@@ -423,6 +423,7 @@ export const CreateAiModelSchema = z.object({
   contextWindowTokens: z.number().optional(),
   displayName: z.string().optional(),
   id: z.string(),
+  parameters: z.record(z.any()).optional(),
   providerId: z.string(),
   releasedAt: z.string().optional(),
   settings: AiModelSettingsSchema.optional(),
@@ -462,6 +463,7 @@ export const UpdateAiModelSchema = z.object({
     .optional(),
   contextWindowTokens: z.number().nullable().optional(),
   displayName: z.string().nullable().optional(),
+  parameters: z.record(z.any()).nullable().optional(),
   settings: AiModelSettingsSchema.optional(),
   type: AiModelTypeSchema.optional(),
 });

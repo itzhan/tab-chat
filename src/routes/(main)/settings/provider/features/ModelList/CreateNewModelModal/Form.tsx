@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { type ChatModelCard } from '@/types/llm';
 
 import ExtendParamsSelect from './ExtendParamsSelect';
+import ParametersEditor from './ParametersEditor';
 
 interface ModelConfigFormProps {
   idEditable?: boolean;
@@ -35,8 +36,8 @@ const ModelConfigForm = memo<ModelConfigFormProps>(
             'embedding',
             'tts',
             'stt',
-            // 'image',
-            // 'video',
+            'image',
+            'video',
             // 'text2music',
             'realtime',
           ] as AiModelType[]
@@ -54,6 +55,9 @@ const ModelConfigForm = memo<ModelConfigFormProps>(
     useEffect(() => {
       onFormInstanceReady(formInstance);
     }, []);
+
+    const watchedType = Form.useWatch('type', formInstance);
+    const isMediaType = watchedType === 'image' || watchedType === 'video';
 
     return (
       <div
@@ -171,6 +175,15 @@ const ModelConfigForm = memo<ModelConfigFormProps>(
               placeholder={t('providerModels.item.modelConfig.type.placeholder')}
             />
           </Form.Item>
+          {isMediaType && (
+            <Form.Item
+              extra={'图片/视频模型的参数 schema（JSON）。点击下方按钮可一键填入默认值。'}
+              label={'参数 Schema'}
+              name={'parameters'}
+            >
+              <ParametersEditor />
+            </Form.Item>
+          )}
           {/*<Form.Item*/}
           {/*  extra={t('providerModels.item.modelConfig.files.extra')}*/}
           {/*  label={t('providerModels.item.modelConfig.files.title')}*/}

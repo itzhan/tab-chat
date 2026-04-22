@@ -52,42 +52,53 @@ interface CreateCallerOptions {
 }
 
 /**
- * Factory method for creating caller, using HTTP Client to make calls
- * Unified usage pattern: caller.a.b()
+ * Factory method for creating caller.
+ *
+ * Uses an **in-process tRPC caller** (no HTTP self-loop) so the async dispatch
+ * does NOT depend on INTERNAL_APP_URL/APP_URL and cannot fail silently when the
+ * Next.js server port differs from the env value. This fixes the symptom where
+ * image.createImage creates the batch row but the async task never runs.
+ *
+ * Errors from procedure calls are logged with console.error (instead of the
+ * previous fire-and-forget HTTP rejection that was swallowed).
  */
 export const createAsyncCaller = async (
   options: CreateCallerOptions,
 ): Promise<UnifiedAsyncCaller> => {
   const { userId } = options;
 
-  const httpClient = await createAsyncServerClient(userId);
-  const createRecursiveProxy = (client: any, path: string[]): any => {
-    // The target is a dummy function, so that 'apply' can be triggered.
-    return new Proxy(() => {}, {
-      apply: (_target, _thisArg, args) => {
-        // 'apply' is triggered by the function call `(...)`.
-        // The `path` at this point is the full path to the procedure.
+  // Sign an internal JWT so asyncAuth middleware still validates the call.
+  const authorizationToken = await signInternalJWT();
 
-        // Traverse the original httpClient to get the actual procedure object.
-        const procedure = path.reduce((obj, key) => (obj ? obj[key] : undefined), client);
+  const createCaller = createAsyncCallerFactory(asyncRouter);
+  const inProcessCaller = createCaller({ authorizationToken, userId });
 
-        if (procedure && typeof procedure.mutate === 'function') {
-          // If we found a valid procedure, call its mutate method.
-          return procedure.mutate(...args);
-        } else {
-          // This should not happen if the call path is correct.
-          const message = `Procedure not found or not valid at path: ${path.join('.')}`;
-          throw new Error(message);
+  // Wrap the caller so every procedure call gets an error logger attached.
+  // This preserves existing call-sites (caller.image.createImage({...}))
+  // while surfacing failures in the server console instead of eating them.
+  const wrap = (target: any, path: string[]): any =>
+    new Proxy(() => {}, {
+      apply: (_t, _this, args) => {
+        const procedure = path.reduce((obj, key) => (obj ? obj[key] : undefined), target);
+        if (typeof procedure !== 'function') {
+          throw new Error(`Async procedure not found at path: ${path.join('.')}`);
         }
+        const result = procedure(...args);
+        if (result && typeof (result as any).then === 'function') {
+          (result as Promise<unknown>).catch((err) => {
+            console.error(
+              `[async-caller] ${path.join('.')} failed:`,
+              err instanceof Error ? err.stack || err.message : err,
+            );
+          });
+        }
+        return result;
       },
-      get: (_, property: string) => {
-        // When a property is accessed, we just extend the path and return a new proxy.
-        // This handles `caller.file.parseFileToChunks`
-        if (property === 'then') return undefined; // Prevent async/await issues
-        return createRecursiveProxy(client, [...path, property as string]);
+      get: (_t, property: string) => {
+        if (property === 'then') return undefined;
+        return wrap(target, [...path, property]);
       },
     });
-  };
 
-  return createRecursiveProxy(httpClient, []);
+  return wrap(inProcessCaller, []) as unknown as UnifiedAsyncCaller;
 };
