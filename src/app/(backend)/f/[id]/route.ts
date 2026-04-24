@@ -13,8 +13,25 @@ type Params = Promise<{ id: string }>;
 const FILE_PROXY_KEY_PREFIX = 'file-proxy:';
 // Cache presigned URL for 4 minutes (URL expires in 5 minutes)
 const PRESIGNED_URL_CACHE_TTL = 240;
+// Hard cap on any Redis op so an unreachable / misconfigured Redis never
+// stalls image previews — ioredis otherwise retries forever by default.
+const REDIS_OP_TIMEOUT_MS = 1500;
 
 const buildCacheKey = (id: string) => `${FILE_PROXY_KEY_PREFIX}${id}`;
+
+const withTimeout = <T>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
+  Promise.race<T | null>([
+    p,
+    new Promise<null>((resolve) =>
+      setTimeout(() => {
+        log('Redis %s timeout after %dms, skipping cache', label, ms);
+        resolve(null);
+      }, ms),
+    ),
+  ]).catch((err) => {
+    log('Redis %s error: %s, skipping cache', label, (err as Error).message);
+    return null;
+  });
 
 interface CachedFileData {
   redirectUrl: string;
@@ -37,13 +54,16 @@ export const GET = async (_req: Request, segmentData: { params: Params }) => {
 
     log('File proxy request: %s', id);
 
-    // Try to get cached presigned URL from Redis
+    // Try to get cached presigned URL from Redis. Any stall here — unreachable
+    // Redis, auth hang, slow DNS — must not block the image preview.
     const redisConfig = getRedisConfig();
-    const redisClient = isRedisEnabled(redisConfig) ? await initializeRedis(redisConfig) : null;
+    const redisClient = isRedisEnabled(redisConfig)
+      ? await withTimeout(initializeRedis(redisConfig), REDIS_OP_TIMEOUT_MS, 'init')
+      : null;
 
     const cacheKey = buildCacheKey(id);
     if (redisClient) {
-      const cachedStr = await redisClient.get(cacheKey);
+      const cachedStr = await withTimeout(redisClient.get(cacheKey), REDIS_OP_TIMEOUT_MS, 'get');
       const cached = cachedStr ? (JSON.parse(cachedStr) as CachedFileData) : null;
       if (cached?.redirectUrl) {
         log('Cache hit for file: %s', id);
@@ -72,11 +92,15 @@ export const GET = async (_req: Request, segmentData: { params: Params }) => {
     const redirectUrl = await fileService.createPreSignedUrlForPreview(file.url, 300);
     log('Web S3 presigned URL generated (expires in 5 min)');
 
-    // Cache the presigned URL in Redis
+    // Best-effort cache write. Failure/slowness here must not delay the redirect.
     if (redisClient) {
-      await redisClient.set(cacheKey, JSON.stringify({ redirectUrl }), {
-        ex: PRESIGNED_URL_CACHE_TTL,
-      });
+      await withTimeout(
+        redisClient.set(cacheKey, JSON.stringify({ redirectUrl }), {
+          ex: PRESIGNED_URL_CACHE_TTL,
+        }),
+        REDIS_OP_TIMEOUT_MS,
+        'set',
+      );
       log('Cached presigned URL for file: %s (TTL: %ds)', id, PRESIGNED_URL_CACHE_TTL);
     }
 

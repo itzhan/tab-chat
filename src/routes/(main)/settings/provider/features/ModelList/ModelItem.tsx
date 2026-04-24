@@ -79,7 +79,7 @@ const ModelItem = memo<ModelItemProps>(
     type,
   }) => {
     const { t } = useTranslation(['modelProvider', 'components', 'models', 'common']);
-    const { modelEditable } = use(ProviderSettingsContext);
+    const { modelEditable, readOnly } = use(ProviderSettingsContext);
 
     const [activeAiProvider, isModelLoading, toggleModelEnabled, removeAiModel] = useAiInfraStore(
       (s) => [
@@ -175,6 +175,7 @@ const ModelItem = memo<ModelItemProps>(
     const EnableSwitch = canToggle ? (
       <Switch
         checked={checked}
+        disabled={readOnly}
         loading={isModelLoading}
         size={'small'}
         onChange={async (e) => {
@@ -185,6 +186,7 @@ const ModelItem = memo<ModelItemProps>(
     ) : null;
 
     const Actions =
+      !readOnly &&
       modelEditable &&
       ((style?: React.CSSProperties) => (
         <Flexbox horizontal className={styles.config} style={style}>

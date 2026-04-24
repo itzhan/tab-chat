@@ -28,6 +28,8 @@ import { FormInput, FormPassword } from '@/components/FormInput';
 import { SkeletonInput, SkeletonSwitch } from '@/components/Skeleton';
 import { lambdaQuery } from '@/libs/trpc/client';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 import { type AiProviderDetailItem, type AiProviderSourceType } from '@/types/aiProvider';
 import { AiProviderSourceEnum } from '@/types/aiProvider';
 
@@ -141,9 +143,11 @@ const ProviderConfig = memo<ProviderConfigProps>(
       disableBrowserRequest,
       showChecker = true,
       supportResponsesApi,
+      allowUserApiKey,
     } = settings || {};
     const { t } = useTranslation('modelProvider');
     const [form] = Form.useForm();
+    const isAdmin = useUserStore(userProfileSelectors.isAdmin);
 
     const isOAuthProvider = authType === 'oauthDeviceFlow';
 
@@ -326,7 +330,8 @@ const ProviderConfig = memo<ProviderConfigProps>(
             <SkeletonInput />
           ) : (
             <FormInput
-              allowClear
+              allowClear={isAdmin}
+              disabled={!isAdmin}
               placeholder={
                 (!!proxyUrl && proxyUrl?.placeholder) ||
                 t('providerModels.config.baseURL.placeholder')
@@ -378,20 +383,43 @@ const ProviderConfig = memo<ProviderConfigProps>(
         }
       : undefined;
 
+    // Admin-only: toggle whether this provider lets end users supply their own API Key.
+    // When on, non-admin users see the provider in their settings and can edit only apiKey;
+    // baseURL / models / other fields stay admin-controlled.
+    const allowUserApiKeyItem: FormItemProps | undefined =
+      isAdmin && showApiKey && !isOAuthProvider
+        ? {
+            children: isLoading ? <Skeleton.Button active /> : <Switch loading={configUpdating} />,
+            desc: '开启后，该服务商将出现在用户的"设置-AI服务商"中，用户只能修改 API Key，其它字段仍由管理员统一控制。',
+            label: '允许用户使用自己的 API Key',
+            minWidth: undefined,
+            name: ['settings', 'allowUserApiKey'],
+          }
+        : undefined;
+
+    // For non-admin BYO users: baseURL and other admin-owned fields stay
+    // VISIBLE (so the user understands what's configured) but disabled, and
+    // all actionable controls — connection check button, client-fetch
+    // toggle — are removed entirely. The only editable field is apiKey.
     const configItems = [
       ...apiKeyItem,
       endpointItem,
       supportResponsesApi
         ? {
-            children: isLoading ? <Skeleton.Button active /> : <Switch loading={configUpdating} />,
+            children: isLoading ? (
+              <Skeleton.Button active />
+            ) : (
+              <Switch disabled={!isAdmin} loading={configUpdating} />
+            ),
             desc: t('providerModels.config.responsesApi.desc'),
             label: t('providerModels.config.responsesApi.title'),
             minWidth: undefined,
             name: ['config', 'enableResponseApi'],
           }
         : undefined,
-      clientFetchItem,
-      showChecker
+      allowUserApiKeyItem,
+      isAdmin ? clientFetchItem : undefined,
+      isAdmin && showChecker
         ? {
             children: isLoading ? (
               <Skeleton.Button active />
@@ -416,7 +444,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
             label: t('providerModels.config.checker.title'),
           }
         : undefined,
-      showAceGcm && aceGcmItem,
+      isAdmin && showAceGcm && aceGcmItem,
     ].filter(Boolean) as FormItemProps[];
 
     const logoUrl = data?.logo ?? logo;
@@ -465,8 +493,8 @@ const ProviderConfig = memo<ProviderConfigProps>(
     const headerExtra = (
       <Flexbox horizontal align={'center'} gap={8}>
         {extra}
-        {isCustom && <UpdateProviderInfo />}
-        {canDeactivate && !(ENABLE_BUSINESS_FEATURES && id === 'lobehub') && (
+        {isAdmin && isCustom && <UpdateProviderInfo />}
+        {isAdmin && canDeactivate && !(ENABLE_BUSINESS_FEATURES && id === 'lobehub') && (
           <EnableSwitch id={id} key={id} />
         )}
       </Flexbox>

@@ -5,11 +5,17 @@ import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
+
 import CreateNewProvider from '../features/CreateNewProvider';
 
 const AddNewProvider = () => {
   const { t } = useTranslation('modelProvider');
   const [open, setOpen] = useState(false);
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+
+  if (!isAdmin) return null;
 
   return (
     <>

@@ -17,7 +17,7 @@ interface EnabledModelListProps {
 
 const EnabledModelList = ({ activeTab }: EnabledModelListProps) => {
   const { t } = useTranslation('modelProvider');
-  const { modelEditable } = use(ProviderSettingsContext);
+  const { modelEditable, readOnly } = use(ProviderSettingsContext);
 
   const enabledModels = useAiInfraStore(aiModelSelectors.enabledAiProviderModelList, isEqual);
   const batchToggleAiModels = useAiInfraStore((s) => s.batchToggleAiModels);
@@ -46,7 +46,7 @@ const EnabledModelList = ({ activeTab }: EnabledModelListProps) => {
         <Text style={{ fontSize: 12, marginTop: 8 }} type={'secondary'}>
           {t('providerModels.list.enabled')}
         </Text>
-        {!isEmpty && (
+        {!isEmpty && !readOnly && (
           <TooltipGroup>
             <Flexbox horizontal>
               {togglableModels.length > 0 && (

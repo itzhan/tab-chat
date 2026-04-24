@@ -145,7 +145,11 @@ export const useCategory = () => {
       });
     }
 
-    // Agent group (admin only —普通用户不配置服务商/模型/凭证)
+    // Agent group:
+    //   - admins see the full set (providers/models/skills/memory/creds/api-key)
+    //   - non-admins see ONLY "AI 服务商" so they can enter BYO key management
+    //     for providers the admin has opened up. Models/skills/creds etc. are
+    //     still admin-only since users can't configure those.
     if (isAdmin) {
       const agentItems: CategoryItem[] = [
         (!enableBusinessFeatures || isDevMode) && {
@@ -182,6 +186,18 @@ export const useCategory = () => {
 
       groups.push({
         items: agentItems,
+        key: SettingsGroupKey.Agent,
+        title: t('group.aiConfig'),
+      });
+    } else {
+      groups.push({
+        items: [
+          {
+            icon: Brain,
+            key: SettingsTabs.Provider,
+            label: t('tab.provider'),
+          },
+        ],
         key: SettingsGroupKey.Agent,
         title: t('group.aiConfig'),
       });

@@ -18,7 +18,7 @@ const InboxEntry = memo(() => {
   const inboxMeta = useAgentStore(agentSelectors.getAgentMetaById(inboxAgentId!));
   const isLoading = useChatStore(operationSelectors.isAgentRuntimeRunning);
 
-  const title = inboxMeta.title || 'Lobe AI';
+  const title = inboxMeta.title || 'Tab AI';
   const avatar = inboxMeta.avatar || DEFAULT_INBOX_AVATAR;
   const url = SESSION_CHAT_URL(inboxAgentId, false);
 
@@ -33,9 +33,9 @@ const InboxEntry = memo(() => {
       }}
     >
       <NavItem
+        icon={<Avatar emojiScaleWithBackground avatar={avatar} shape={'square'} size={24} />}
         loading={isLoading}
         title={title}
-        icon={<Avatar emojiScaleWithBackground avatar={avatar} shape={'square'} size={24} />}
       />
     </Link>
   );

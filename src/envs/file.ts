@@ -26,6 +26,8 @@ export const getFileConfig = () => {
       CHUNKS_AUTO_GEN_METADATA: process.env.CHUNKS_AUTO_GEN_METADATA !== '0',
       EMBEDDING_BATCH_SIZE: process.env.EMBEDDING_BATCH_SIZE,
       EMBEDDING_CONCURRENCY: process.env.EMBEDDING_CONCURRENCY,
+      FILE_MAX_UPLOAD_SIZE_MB: process.env.FILE_MAX_UPLOAD_SIZE_MB,
+      KB_MAX_FILES_PER_BASE: process.env.KB_MAX_FILES_PER_BASE,
 
       NEXT_PUBLIC_S3_DOMAIN: process.env.NEXT_PUBLIC_S3_DOMAIN,
       NEXT_PUBLIC_S3_FILE_PATH: process.env.NEXT_PUBLIC_S3_FILE_PATH || DEFAULT_S3_FILE_PATH,
@@ -45,6 +47,18 @@ export const getFileConfig = () => {
       CHUNKS_AUTO_GEN_METADATA: z.boolean(),
       EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(50),
       EMBEDDING_CONCURRENCY: z.coerce.number().int().positive().default(10),
+      /**
+       * Hard cap (MB) on a single uploaded file. 0 = unlimited. Default 100 MB
+       * keeps a single runaway upload from eating up storage / memory while
+       * still allowing typical PDFs, slides, and images through.
+       */
+      FILE_MAX_UPLOAD_SIZE_MB: z.coerce.number().int().nonnegative().default(100),
+      /**
+       * Hard cap on the number of files in a single knowledge base. 0 = unlimited.
+       * Prevents a single KB from accumulating so many chunks that embedding /
+       * retrieval times balloon.
+       */
+      KB_MAX_FILES_PER_BASE: z.coerce.number().int().nonnegative().default(500),
 
       // S3
       S3_ACCESS_KEY_ID: z.string().optional(),

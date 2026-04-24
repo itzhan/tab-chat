@@ -1,4 +1,6 @@
+import { globalFiles } from '@lobechat/database/schemas';
 import { TRPCError } from '@trpc/server';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { businessFileUploadCheck } from '@/business/server/lambda-routers/file';
@@ -8,8 +10,10 @@ import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { ChunkModel } from '@/database/models/chunk';
 import { DocumentModel } from '@/database/models/document';
 import { FileModel } from '@/database/models/file';
+import { SubscriptionPlanModel, UserSubscriptionModel } from '@/database/models/subscription';
 import { KnowledgeRepo } from '@/database/repositories/knowledge';
 import { appEnv } from '@/envs/app';
+import { fileEnv } from '@/envs/file';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { DocumentService } from '@/server/services/document';
@@ -125,6 +129,40 @@ export const fileRouter = router({
     .mutation(async ({ ctx, input }) => {
       return ctx.fileModel.checkHash(input.hash);
     }),
+
+  /**
+   * Return the current user's storage usage alongside their plan quota and
+   * the deployment-wide per-file cap. Powers the "storage used" bar shown on
+   * the subscription page and the KB home header.
+   */
+  getStorageUsage: fileProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.serverDB
+      .select({ total: sql<number>`COALESCE(SUM(${globalFiles.size}), 0)` })
+      .from(globalFiles)
+      .where(eq(globalFiles.creator, ctx.userId));
+    const usedBytes = Number(rows[0]?.total ?? 0);
+
+    // Plan quota (0 or missing → unlimited at the plan level).
+    let quotaBytes = 0;
+    try {
+      const subscription = await new UserSubscriptionModel(ctx.serverDB).ensureDefault(ctx.userId);
+      if (subscription) {
+        const plan = await new SubscriptionPlanModel(ctx.serverDB).getById(subscription.planId);
+        quotaBytes = plan?.storageQuotaBytes ?? 0;
+      }
+    } catch {
+      // If subscription layer isn't wired up, fall back to unlimited.
+    }
+
+    const maxUploadBytes =
+      fileEnv.FILE_MAX_UPLOAD_SIZE_MB > 0 ? fileEnv.FILE_MAX_UPLOAD_SIZE_MB * 1024 * 1024 : 0;
+
+    return {
+      maxUploadBytes,
+      quotaBytes,
+      usedBytes,
+    };
+  }),
 
   createFile: fileProcedure
     .use(checkFileStorageUsage)

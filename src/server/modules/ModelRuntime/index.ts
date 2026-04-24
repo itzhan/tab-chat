@@ -1,6 +1,7 @@
 import { type GoogleGenAIOptions } from '@google/genai';
-import { ModelRuntime, type ModelRuntimeHooks } from '@lobechat/model-runtime';
+import { AgentRuntimeError, ModelRuntime, type ModelRuntimeHooks } from '@lobechat/model-runtime';
 import { LobeVertexAI } from '@lobechat/model-runtime/vertexai';
+import { AgentRuntimeErrorType } from '@lobechat/types';
 import {
   type AWSBedrockKeyVault,
   type AzureOpenAIKeyVault,
@@ -431,7 +432,30 @@ export const initModelRuntimeFromDB = async (
 
   // 3. Build ClientSecretPayload from keyVaults based on runtimeProvider
   // This ensures provider-specific fields (e.g., cloudflareBaseURLOrAccountID) are included
-  const keyVaults = (providerConfig?.keyVaults || {}) as ProviderKeyVaults;
+  let keyVaults = (providerConfig?.keyVaults || {}) as ProviderKeyVaults;
+
+  // BYO-key: when the admin has enabled `allowUserApiKey` for this provider,
+  // the caller must supply their own apiKey. We keep the admin's baseURL /
+  // other fields but override apiKey with the caller's own row value. If the
+  // caller hasn't set one yet, throw a user-facing error so the chat UI can
+  // redirect them to Settings.
+  if (providerConfig?.settings?.allowUserApiKey && userId !== configOwnerId) {
+    const userProviderModel = new AiProviderModel(db, userId);
+    const userProviderConfig = await userProviderModel.getAiProviderById(
+      provider,
+      KeyVaultsGateKeeper.getUserKeyVaults,
+    );
+    const userApiKey = (userProviderConfig?.keyVaults as any)?.apiKey as string | undefined;
+    if (!userApiKey || userApiKey.trim() === '') {
+      const providerLabel = providerConfig?.name || provider;
+      throw AgentRuntimeError.createError(AgentRuntimeErrorType.InvalidProviderAPIKey, {
+        message: `请在设置中填写 ${providerLabel} 的 API Key`,
+        provider,
+      });
+    }
+    keyVaults = { ...keyVaults, apiKey: userApiKey } as ProviderKeyVaults;
+  }
+
   const payload = buildPayloadFromKeyVaults(keyVaults, runtimeProvider);
 
   // 4. Get business hooks (billing in cloud, undefined in OSS)

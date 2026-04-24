@@ -8,10 +8,17 @@ interface ParametersEditorProps {
 
 const IMAGE_PRESET = {
   imageUrls: { default: [] },
+  // Ask the upstream to return WebP at ~80 quality so we don't upload
+  // 2MB PNGs to object storage. Users can still switch format / raise
+  // quality per-generation if they need lossless output.
+  output_compression: { default: 100 },
+  output_format: { default: 'webp', enum: ['webp', 'png', 'jpeg'] },
   prompt: { default: '' },
   size: {
-    default: 'auto',
-    enum: ['auto', '1024x1024', '1536x1024', '1024x1536'],
+    // Default to 1K to keep per-image storage cost bounded; 2K tiers stay
+    // available for users who explicitly pick them.
+    default: '1024x1024',
+    enum: ['1024x1024', '1536x1024', '1024x1536', '1792x1024', '1024x1792', 'auto'],
   },
 };
 

@@ -25,7 +25,7 @@ const InboxItem = memo<InboxItemProps>(({ className, style }) => {
 
   const isLoading = useChatStore(operationSelectors.isAgentRuntimeRunning);
   const prefetchAgent = usePrefetchAgent();
-  const inboxAgentTitle = inboxMeta.title || 'Lobe AI';
+  const inboxAgentTitle = inboxMeta.title || 'Tab AI';
   const inboxAgentAvatar = inboxMeta.avatar || DEFAULT_INBOX_AVATAR;
   const inboxUrl = SESSION_CHAT_URL(inboxAgentId, false);
 

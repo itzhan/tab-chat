@@ -4,8 +4,10 @@ import { eq, sql } from 'drizzle-orm';
 
 import { getServerDB } from '@/database/core/db-adaptor';
 import { SubscriptionPlanModel, UserSubscriptionModel } from '@/database/models/subscription';
+import { fileEnv } from '@/envs/file';
 
 export const STORAGE_QUOTA_EXCEEDED = 'STORAGE_QUOTA_EXCEEDED';
+export const FILE_TOO_LARGE = 'FILE_TOO_LARGE';
 
 export interface BusinessFileUploadCheckParams {
   actualSize: number;
@@ -16,8 +18,15 @@ export interface BusinessFileUploadCheckParams {
 }
 
 /**
- * Block upload when the user's plan storage quota would be exceeded.
- * Quota = 0 means unlimited.
+ * Enforce, in order:
+ *   1. Per-file absolute size cap (FILE_MAX_UPLOAD_SIZE_MB). Runs first so a
+ *      single huge upload gets rejected even before we hit the DB for quota.
+ *   2. Per-user plan storage quota (`subscriptionPlans.storageQuotaBytes`).
+ *      Quota = 0 or no plan → skip this leg.
+ *
+ * Both layers are additive: a user with generous quota still can't upload a
+ * 10GB file, and a user on a tiny plan still gets blocked by the quota even
+ * if the single file is under the cap.
  */
 export async function businessFileUploadCheck(
   params: BusinessFileUploadCheckParams,
@@ -25,6 +34,19 @@ export async function businessFileUploadCheck(
   const { actualSize, userId } = params;
   if (actualSize <= 0) return;
 
+  // Layer 1: per-file cap (env-driven, deployment-wide)
+  const maxMB = fileEnv.FILE_MAX_UPLOAD_SIZE_MB;
+  if (maxMB > 0) {
+    const maxBytes = maxMB * 1024 * 1024;
+    if (actualSize > maxBytes) {
+      throw new TRPCError({
+        code: 'PAYLOAD_TOO_LARGE',
+        message: `${FILE_TOO_LARGE}:${maxBytes}:${actualSize}`,
+      });
+    }
+  }
+
+  // Layer 2: per-user plan quota
   const db = await getServerDB();
 
   const subscription = await new UserSubscriptionModel(db).ensureDefault(userId);

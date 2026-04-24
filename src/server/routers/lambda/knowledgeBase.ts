@@ -1,13 +1,18 @@
+import { knowledgeBaseFiles } from '@lobechat/database/schemas';
 import { TRPCError } from '@trpc/server';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { serverDBEnv } from '@/config/db';
 import { KnowledgeBaseModel } from '@/database/models/knowledgeBase';
 import { insertKnowledgeBasesSchema } from '@/database/schemas';
+import { fileEnv } from '@/envs/file';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileService } from '@/server/services/file';
 import { type KnowledgeBaseItem } from '@/types/knowledgeBase';
+
+export const KB_FILE_LIMIT_EXCEEDED = 'KB_FILE_LIMIT_EXCEEDED';
 
 const knowledgeBaseProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -23,6 +28,28 @@ export const knowledgeBaseRouter = router({
   addFilesToKnowledgeBase: knowledgeBaseProcedure
     .input(z.object({ ids: z.array(z.string()), knowledgeBaseId: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      // Per-KB file-count cap. Checked server-side before insert so a client
+      // can't sneak past by hitting the endpoint directly. 0 = unlimited.
+      const maxPerKB = fileEnv.KB_MAX_FILES_PER_BASE;
+      if (maxPerKB > 0) {
+        const [{ cnt }] = await ctx.serverDB
+          .select({ cnt: sql<number>`COUNT(*)` })
+          .from(knowledgeBaseFiles)
+          .where(
+            and(
+              eq(knowledgeBaseFiles.knowledgeBaseId, input.knowledgeBaseId),
+              eq(knowledgeBaseFiles.userId, ctx.userId),
+            ),
+          );
+        const current = Number(cnt ?? 0);
+        if (current + input.ids.length > maxPerKB) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: `${KB_FILE_LIMIT_EXCEEDED}:${maxPerKB}:${current}`,
+          });
+        }
+      }
+
       try {
         return await ctx.knowledgeBaseModel.addFilesToKnowledgeBase(
           input.knowledgeBaseId,

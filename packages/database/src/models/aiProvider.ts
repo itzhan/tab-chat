@@ -134,11 +134,19 @@ export class AiProviderModel {
 
     const keyVaults = await encrypt(JSON.stringify(mergedKeyVaults));
 
+    // Merge settings so a partial patch (e.g. { allowUserApiKey: true })
+    // doesn't wipe other fields populated at create-time (sdkType, etc.).
+    let mergedSettings: Record<string, any> | undefined;
+    if (value.settings) {
+      mergedSettings = { ...existing?.settings, ...value.settings };
+    }
+
     const commonFields = {
       checkModel: value.checkModel,
       config: value.config,
       fetchOnClient: value.fetchOnClient,
       keyVaults,
+      ...(mergedSettings ? { settings: mergedSettings } : {}),
     };
 
     return this.db

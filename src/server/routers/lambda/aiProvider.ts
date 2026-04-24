@@ -51,8 +51,13 @@ const aiProviderProcedure = authedProcedure.use(serverDatabase).use(async (opts)
       ),
       aiProviderModel: new AiProviderModel(ctx.serverDB, ownerId),
       callerIsAdmin,
+      callerUserId: ctx.userId,
       configOwnerId: ownerId,
       gateKeeper,
+      // Separate model scoped to the caller's own userId. Used for BYO-key
+      // flows where non-admin users write only their own keyVaults.apiKey
+      // to their own ai_providers row (not the admin's shared row).
+      userAiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId),
       userModel: new UserModel(ctx.serverDB, ctx.userId),
     },
   });
@@ -136,7 +141,30 @@ export const aiProviderRouter = router({
     .input(z.object({ id: z.string() }))
 
     .query(async ({ input, ctx }): Promise<AiProviderDetailItem | undefined> => {
-      return ctx.aiInfraRepos.getAiProviderDetail(input.id, KeyVaultsGateKeeper.getUserKeyVaults);
+      const detail = await ctx.aiInfraRepos.getAiProviderDetail(
+        input.id,
+        KeyVaultsGateKeeper.getUserKeyVaults,
+      );
+
+      if (!detail) return detail;
+
+      // BYO-key: for non-admin users, overlay the user's own apiKey on top of
+      // the admin's shared provider config. This lets the settings UI display
+      // and edit the user's personal key while keeping baseURL/models intact.
+      if (
+        !ctx.callerIsAdmin &&
+        detail.settings?.allowUserApiKey &&
+        ctx.callerUserId !== ctx.configOwnerId
+      ) {
+        const userRow = await ctx.userAiProviderModel.getAiProviderById(
+          input.id,
+          KeyVaultsGateKeeper.getUserKeyVaults,
+        );
+        const userApiKey = (userRow?.keyVaults as any)?.apiKey ?? '';
+        detail.keyVaults = { ...detail.keyVaults, apiKey: userApiKey };
+      }
+
+      return detail;
     }),
 
   getAiProviderList: aiProviderProcedure.query(async ({ ctx }) => {
@@ -161,6 +189,20 @@ export const aiProviderRouter = router({
           for (const key of Object.keys(state.runtimeConfig)) {
             const cfg = state.runtimeConfig[key];
             if (cfg) cfg.fetchOnClient = false;
+          }
+        }
+
+        // BYO-key overlay: for providers where the admin opted-in, replace the
+        // shared admin apiKey with the caller's own apiKey so downstream usage
+        // (model picker, settings form hydration) reflects the user's key.
+        if (ctx.callerUserId !== ctx.configOwnerId) {
+          const userRuntime = await ctx.userAiProviderModel.getAiProviderRuntimeConfig(
+            KeyVaultsGateKeeper.getUserKeyVaults,
+          );
+          for (const [providerId, cfg] of Object.entries(state.runtimeConfig)) {
+            if (!cfg?.settings?.allowUserApiKey) continue;
+            const userKey = (userRuntime[providerId]?.keyVaults as any)?.apiKey ?? '';
+            cfg.keyVaults = { ...cfg.keyVaults, apiKey: userKey };
           }
         }
         // When allowClient=true: leave keyVaults and fetchOnClient intact so the
@@ -211,10 +253,34 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      requireAdmin(ctx);
-      return ctx.aiProviderModel.updateConfig(
+      // Admin: writes to the shared admin-owned config as before.
+      if (ctx.callerIsAdmin) {
+        return ctx.aiProviderModel.updateConfig(
+          input.id,
+          input.value,
+          ctx.gateKeeper.encrypt,
+          KeyVaultsGateKeeper.getUserKeyVaults,
+        );
+      }
+
+      // BYO-key: a non-admin caller is only allowed to write when the admin
+      // has explicitly enabled allowUserApiKey for this provider, and only
+      // the keyVaults.apiKey field may be written — to the caller's own row.
+      const adminDetail = await ctx.aiInfraRepos.getAiProviderDetail(
         input.id,
-        input.value,
+        KeyVaultsGateKeeper.getUserKeyVaults,
+      );
+      if (!adminDetail?.settings?.allowUserApiKey) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'admin only' });
+      }
+
+      const apiKey = (input.value.keyVaults as Record<string, any> | undefined)?.apiKey;
+      const restrictedValue = {
+        keyVaults: { apiKey: typeof apiKey === 'string' ? apiKey : '' },
+      };
+      return ctx.userAiProviderModel.updateConfig(
+        input.id,
+        restrictedValue,
         ctx.gateKeeper.encrypt,
         KeyVaultsGateKeeper.getUserKeyVaults,
       );

@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { memo, useMemo } from 'react';
 import useSWR from 'swr';
 
+import StorageUsage from '@/features/StorageUsage';
 import { subscriptionService } from '@/services/subscription';
 
 const MySubscriptionPage = memo(() => {
@@ -54,13 +55,11 @@ const MySubscriptionPage = memo(() => {
               ? dayjs(subscription.expireAt).format('YYYY-MM-DD HH:mm')
               : '永久'}
           </div>
-          <div>
-            知识库容量：
-            {plan.storageQuotaBytes === 0
-              ? '不限'
-              : `${(plan.storageQuotaBytes / 1024 / 1024).toFixed(0)} MB`}
-          </div>
         </Flexbox>
+      </Card>
+
+      <Card title="知识库存储">
+        <StorageUsage title="当前用量" />
       </Card>
 
       <Card title="本月模型用量">

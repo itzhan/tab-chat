@@ -202,6 +202,34 @@ export const ModelParamsMetaSchema = z.object({
     })
     .optional(),
 
+  /**
+   * Output encoding format. Passed through to providers that support
+   * server-side re-encoding (e.g. sub2api's gpt-image API) so the image
+   * arrives already compressed — avoids uploading multi-MB PNGs.
+   */
+  output_format: z
+    .object({
+      default: z.string(),
+      description: z.string().optional(),
+      enum: z.array(z.string()).optional(),
+      type: z.literal('string').optional(),
+    })
+    .optional(),
+
+  /**
+   * Output compression ratio (0-100). Paired with output_format=webp/jpeg.
+   */
+  output_compression: z
+    .object({
+      default: z.number(),
+      description: z.string().optional(),
+      max: z.number().optional().default(100),
+      min: z.number().optional().default(0),
+      step: z.number().optional().default(1),
+      type: z.literal('number').optional(),
+    })
+    .optional(),
+
   promptExtend: z
     .object({
       default: z.union([z.boolean(), z.string()]),

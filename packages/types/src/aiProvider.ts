@@ -121,6 +121,13 @@ const AiProviderSdkTypes = [
 
 export interface AiProviderSettings {
   /**
+   * Whether end users (non-admin) are allowed to provide their own API Key
+   * for this provider. When true, the admin's baseURL / models are still used,
+   * but the apiKey field is sourced from the user's own ai_providers row.
+   * @default false
+   */
+  allowUserApiKey?: boolean;
+  /**
    * Authentication type for the provider
    * @default 'apiKey'
    */
@@ -194,6 +201,7 @@ const OAuthDeviceFlowConfigSchema = z.object({
 });
 
 const AiProviderSettingsSchema = z.object({
+  allowUserApiKey: z.boolean().optional(),
   authType: z.enum(AiProviderAuthTypes).optional(),
   defaultShowBrowserRequest: z.boolean().optional(),
   disableBrowserRequest: z.boolean().optional(),
@@ -340,6 +348,17 @@ export const UpdateAiProviderConfigSchema = z.object({
         z.record(z.string(), z.string()).optional(), // Support nested objects, e.g. customHeaders
       ]),
     )
+    .optional(),
+  /**
+   * Partial settings patch. Admin-only fields (e.g. allowUserApiKey) are
+   * persisted here by the admin form; non-admin BYO flows must not write
+   * this field — the router enforces that.
+   */
+  settings: z
+    .object({
+      allowUserApiKey: z.boolean().optional(),
+    })
+    .passthrough()
     .optional(),
 });
 

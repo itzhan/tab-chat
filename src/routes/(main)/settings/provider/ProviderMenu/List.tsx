@@ -18,6 +18,8 @@ import { aiProviderSelectors } from '@/store/aiInfra';
 import { useAiInfraStore } from '@/store/aiInfra/store';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import Actions from './Actions';
 import All from './All';
@@ -53,20 +55,23 @@ const ProviderList = (props: {
     sortType: (sortType || SortType.Default) as SortType,
   });
 
-  const enabledModelProviderList = useAiInfraStore(
-    aiProviderSelectors.enabledAiProviderList,
-    isEqual,
-  );
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  const runtimeConfig = useAiInfraStore((s) => s.aiProviderRuntimeConfig);
 
-  const disabledModelProviderList = useAiInfraStore(
-    aiProviderSelectors.disabledAiProviderList,
-    isEqual,
-  );
-
-  const disabledCustomProviderList = useAiInfraStore(
+  const enabledAll = useAiInfraStore(aiProviderSelectors.enabledAiProviderList, isEqual);
+  const disabledAll = useAiInfraStore(aiProviderSelectors.disabledAiProviderList, isEqual);
+  const disabledCustomAll = useAiInfraStore(
     aiProviderSelectors.disabledCustomAiProviderList,
     isEqual,
   );
+
+  // Non-admin users only see providers where the admin has explicitly enabled
+  // "user brings own API key" — they're the only ones the user can configure.
+  const byoFilter = (p: { id: string }) => !!runtimeConfig?.[p.id]?.settings?.allowUserApiKey;
+
+  const enabledModelProviderList = isAdmin ? enabledAll : enabledAll.filter(byoFilter);
+  const disabledModelProviderList = isAdmin ? disabledAll : [];
+  const disabledCustomProviderList = isAdmin ? disabledCustomAll : [];
 
   // Sort model providers based on sort type
   const sortedDisabledProviders = useMemo(() => {
@@ -93,9 +98,25 @@ const ProviderList = (props: {
     }
   }, [disabledModelProviderList, sortType]);
 
+  // Friendly empty state for non-admin users: either the runtime config
+  // hasn't loaded yet (`runtimeConfig` is `{}`) or the admin simply hasn't
+  // enabled BYO on anything. Either way, showing a blank sidebar with no
+  // context feels broken — spell it out instead.
+  if (!isAdmin && enabledModelProviderList.length === 0) {
+    return (
+      <Flexbox gap={8} padding={16} style={{ color: '#888', fontSize: 13, lineHeight: 1.6 }}>
+        <div>管理员尚未开放任何服务商让用户自定义 API Key。</div>
+        <div>
+          如需使用自己的密钥，请联系管理员在服务商设置里打开&ldquo;允许用户使用自己的 API
+          Key&rdquo;。
+        </div>
+      </Flexbox>
+    );
+  }
+
   return (
     <Flexbox gap={4} paddingInline={4} style={{ paddingBottom: 32 }}>
-      {!mobile && <All onClick={onProviderSelect} />}
+      {!mobile && isAdmin && <All onClick={onProviderSelect} />}
       {open && (
         <SortProviderModal
           defaultItems={enabledModelProviderList}

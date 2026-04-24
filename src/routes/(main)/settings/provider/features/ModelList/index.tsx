@@ -152,12 +152,32 @@ interface ModelListProps extends ProviderSettingsContextValue {
 }
 
 const ModelList = memo<ModelListProps>(
-  ({ id, showModelFetcher, sdkType, showAddNewModel, showDeployName, modelEditable = true }) => {
+  ({
+    id,
+    showModelFetcher,
+    sdkType,
+    showAddNewModel,
+    showDeployName,
+    modelEditable = true,
+    readOnly = false,
+  }) => {
     const mobile = useIsMobile();
+
+    // readOnly collapses every actionable surface so non-admin BYO viewers can
+    // see the catalog without being able to fetch, add, delete, or toggle.
+    const effectiveShowAddNewModel = readOnly ? false : showAddNewModel;
+    const effectiveShowModelFetcher = readOnly ? false : showModelFetcher;
 
     return (
       <ProviderSettingsContext
-        value={{ modelEditable, sdkType, showAddNewModel, showDeployName, showModelFetcher }}
+        value={{
+          modelEditable,
+          readOnly,
+          sdkType,
+          showAddNewModel: effectiveShowAddNewModel,
+          showDeployName,
+          showModelFetcher: effectiveShowModelFetcher,
+        }}
       >
         <Flexbox
           gap={16}
@@ -170,8 +190,8 @@ const ModelList = memo<ModelListProps>(
         >
           <ModelTitle
             provider={id}
-            showAddNewModel={showAddNewModel}
-            showModelFetcher={showModelFetcher}
+            showAddNewModel={effectiveShowAddNewModel}
+            showModelFetcher={effectiveShowModelFetcher}
           />
           <Suspense fallback={<SkeletonList />}>
             <Content id={id} />
