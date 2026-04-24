@@ -30,7 +30,7 @@ export class AssistantActionImpl {
   ): SWRResponse<CategoryItem[]> => {
     const locale = globalHelpers.getCurrentLanguage();
     return useSWR(
-      ['assistant-categories', locale, ...Object.values(params)].filter(Boolean).join('-'),
+      ['assistant-categories', locale, JSON.stringify(params)].join('-'),
       async () => discoverService.getAssistantCategories(params),
       {
         revalidateOnFocus: false,
@@ -71,7 +71,7 @@ export class AssistantActionImpl {
   useAssistantList = (params: AssistantQueryParams = {}): SWRResponse<AssistantListResponse> => {
     const locale = globalHelpers.getCurrentLanguage();
     return useSWR(
-      ['assistant-list', locale, ...Object.values(params)].filter(Boolean).join('-'),
+      ['assistant-list', locale, JSON.stringify(params)].join('-'),
       async () =>
         discoverService.getAssistantList({
           ...params,
