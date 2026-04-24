@@ -260,25 +260,37 @@ export class AiInfraRepos {
   getAiProviderRuntimeState = async (
     decryptor?: DecryptUserKeyVaults,
   ): Promise<AiProviderRuntimeState> => {
-    const [result, enabledAiProviders, allModels] = await Promise.all([
+    // Only fetch enabled models here. The prior behavior (filterEnabled=false) shipped
+    // every model-bank entry for every enabled provider to the client on each page
+    // load (hundreds of models, 300+KB JSON). Downstream filtering already reduces
+    // to `enabled === true` anyway, so excluding disabled at the repo layer is both
+    // correct and makes `enabled{Chat,Image,Video}AiProviders` reflect "providers that
+    // have at least one usable model" rather than "…any declared model".
+    const [result, enabledAiProviders, enabledModels] = await Promise.all([
       this.aiProviderModel.getAiProviderRuntimeConfig(decryptor),
       this.getUserEnabledProviderList(),
-      this.getEnabledModels(false),
+      this.getEnabledModels(true),
     ]);
 
     const runtimeConfig = result;
     Object.entries(result).forEach(([key, value]) => {
       runtimeConfig[key] = merge(this.providerConfigs[key] || {}, value);
     });
-    const enabledAiModels = allModels.filter((model) => model.enabled);
+    const enabledAiModels = enabledModels;
     const enabledChatAiProviders = enabledAiProviders.filter((provider) => {
-      return allModels.some((model) => model.providerId === provider.id && model.type === 'chat');
+      return enabledModels.some(
+        (model) => model.providerId === provider.id && model.type === 'chat',
+      );
     });
     const enabledImageAiProviders = enabledAiProviders.filter((provider) => {
-      return allModels.some((model) => model.providerId === provider.id && model.type === 'image');
+      return enabledModels.some(
+        (model) => model.providerId === provider.id && model.type === 'image',
+      );
     });
     const enabledVideoAiProviders = enabledAiProviders.filter((provider) => {
-      return allModels.some((model) => model.providerId === provider.id && model.type === 'video');
+      return enabledModels.some(
+        (model) => model.providerId === provider.id && model.type === 'video',
+      );
     });
 
     return {
