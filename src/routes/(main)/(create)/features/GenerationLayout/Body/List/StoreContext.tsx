@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, use } from 'react';
+import { createContext, useContext } from 'react';
 import type { SWRResponse } from 'swr';
 import type { StoreApi, UseBoundStore } from 'zustand';
 
@@ -25,7 +25,7 @@ export interface GenerationTopicContextValue {
 const GenerationTopicContext = createContext<GenerationTopicContextValue | null>(null);
 
 export const useGenerationTopicContext = () => {
-  const ctx = use(GenerationTopicContext);
+  const ctx = useContext(GenerationTopicContext);
   if (!ctx) {
     throw new Error('useGenerationTopicContext must be used within GenerationTopicStoreProvider');
   }

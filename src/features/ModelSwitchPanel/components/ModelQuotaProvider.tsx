@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, memo, type ReactNode, use, useMemo } from 'react';
+import { createContext, memo, type ReactNode, useContext, useMemo } from 'react';
 import useSWR from 'swr';
 
 import { subscriptionService } from '@/services/subscription';
@@ -77,7 +77,7 @@ export const ModelQuotaProvider = memo<ProviderProps>(({ enabledList, children }
 ModelQuotaProvider.displayName = 'ModelQuotaProvider';
 
 export const useModelQuota = (providerId?: string, modelId?: string) => {
-  const ctx = use(ModelQuotaContext);
+  const ctx = useContext(ModelQuotaContext);
   if (!providerId || !modelId) return undefined;
   return ctx.getQuota(providerId, modelId);
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { createContext, use } from 'react';
+import { createContext, useContext } from 'react';
 
 interface SettingsContextType {
   showOpenAIApiKey?: boolean;
@@ -11,7 +11,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export const useSettingsContext = () => {
-  const context = use(SettingsContext);
+  const context = useContext(SettingsContext);
   if (!context) {
     throw new Error(
       'useSettingsContext must be used within a descendant of SettingsContextProvider',

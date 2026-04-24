@@ -1,7 +1,7 @@
 'use client';
 
 import type { PropsWithChildren } from 'react';
-import { createContext, memo, use, useMemo } from 'react';
+import { createContext, memo, useContext, useMemo } from 'react';
 
 import { useKnowledgeBaseStore } from '@/store/library';
 import type { KnowledgeBaseItem } from '@/types/knowledgeBase';
@@ -20,7 +20,7 @@ export const KnowledgeBaseListProvider = memo<PropsWithChildren>(({ children }) 
 KnowledgeBaseListProvider.displayName = 'KnowledgeBaseListProvider';
 
 export const useKnowledgeBaseListContext = () => {
-  const context = use(KnowledgeBaseListContext);
+  const context = useContext(KnowledgeBaseListContext);
 
   if (!context) {
     throw new Error('useKnowledgeBaseListContext must be used within KnowledgeBaseListProvider');

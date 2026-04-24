@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { createContext, memo, use } from 'react';
+import { createContext, memo, useContext } from 'react';
 
 import { type MarketUserProfile } from '@/layout/AuthProvider/MarketAuth/types';
 import {
@@ -44,7 +44,7 @@ export const UserDetailProvider = memo<{ children: ReactNode; config: UserDetail
 );
 
 export const useUserDetailContext = () => {
-  const context = use(UserDetailContext);
+  const context = useContext(UserDetailContext);
   if (!context) {
     throw new Error('useUserDetailContext must be used within UserDetailProvider');
   }

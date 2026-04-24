@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { createContext, lazy, memo, Suspense, use, useState } from 'react';
+import { createContext, lazy, memo, Suspense, useContext, useState } from 'react';
 
 // Lazy load ChatGroupWizard to avoid bundling it globally
 const ChatGroupWizard = lazy(() =>
@@ -22,7 +22,7 @@ interface GroupWizardContextValue {
 const GroupWizardContext = createContext<GroupWizardContextValue | null>(null);
 
 export const useGroupWizard = () => {
-  const context = use(GroupWizardContext);
+  const context = useContext(GroupWizardContext);
   if (!context) {
     throw new Error('useGroupWizard must be used within GroupWizardProvider');
   }

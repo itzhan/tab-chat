@@ -4,7 +4,7 @@ import { ComfyUI } from '@lobehub/icons';
 import { Button, Center, Flexbox, Icon, Select } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon, Network } from 'lucide-react';
-import { memo, use, useEffect, useState } from 'react';
+import { memo, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FormInput, FormPassword } from '@/components/FormInput';
@@ -48,7 +48,7 @@ const ComfyUIForm = memo<ComfyUIFormProps>(({ description }) => {
   const updateAiProviderConfig = useAiInfraStore((s) => s.updateAiProviderConfig);
   const useFetchAiProviderRuntimeState = useAiInfraStore((s) => s.useFetchAiProviderRuntimeState);
 
-  const { loading, setLoading } = use(LoadingContext);
+  const { loading, setLoading } = useContext(LoadingContext);
 
   // Fetch the runtime state to ensure config is loaded
   // Pass true since this is for auth dialog (not initialization)

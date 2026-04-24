@@ -1,6 +1,6 @@
 import { Button, Modal } from '@lobehub/ui';
 import { type FormInstance } from 'antd';
-import { memo, use, useState } from 'react';
+import { memo, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAiInfraStore } from '@/store/aiInfra';
@@ -26,7 +26,7 @@ const ModelConfigModal = memo<ModelConfigModalProps>(({ open, setOpen }) => {
     setOpen(false);
   };
 
-  const { showDeployName } = use(ProviderSettingsContext);
+  const { showDeployName } = useContext(ProviderSettingsContext);
 
   return (
     <Modal

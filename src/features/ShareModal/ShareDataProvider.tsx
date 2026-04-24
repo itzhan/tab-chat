@@ -2,7 +2,7 @@
 
 import { type ConversationContext, type UIChatMessage } from '@lobechat/types';
 import isEqual from 'fast-deep-equal';
-import { createContext, memo, type PropsWithChildren, use, useMemo } from 'react';
+import { createContext, memo, type PropsWithChildren, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAgentStore } from '@/store/agent';
@@ -115,7 +115,7 @@ const ShareDataProvider = memo<PropsWithChildren<ShareDataProviderProps>>(
 ShareDataProvider.displayName = 'ShareDataProvider';
 
 export const useShareData = () => {
-  const context = use(ShareDataContext);
+  const context = useContext(ShareDataContext);
 
   if (!context) {
     throw new Error('useShareData must be used within ShareDataProvider');

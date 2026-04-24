@@ -5,7 +5,7 @@ import { App } from 'antd';
 import { cssVar } from 'antd-style';
 import { FileText, FolderIcon } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
-import { createContext, memo, use, useEffect, useRef, useState } from 'react';
+import { createContext, memo, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -42,7 +42,7 @@ const DragActiveContext = createContext<boolean>(false);
  * Hook to check if drag is currently active
  * Use this to conditionally enable droppable zones for performance optimization
  */
-export const useDragActive = () => use(DragActiveContext);
+export const useDragActive = () => useContext(DragActiveContext);
 
 interface DragState {
   data: any;
@@ -54,10 +54,10 @@ interface DragState {
 const CurrentDragContext = createContext<DragState | null>(null);
 const SetCurrentDragContext = createContext<((_state: DragState | null) => void) | null>(null);
 
-export const useCurrentDrag = () => use(CurrentDragContext);
+export const useCurrentDrag = () => useContext(CurrentDragContext);
 
 export const useSetCurrentDrag = () => {
-  const setCurrentDrag = use(SetCurrentDragContext);
+  const setCurrentDrag = useContext(SetCurrentDragContext);
 
   if (!setCurrentDrag) {
     throw new Error('useSetCurrentDrag must be used within DndContextWrapper');

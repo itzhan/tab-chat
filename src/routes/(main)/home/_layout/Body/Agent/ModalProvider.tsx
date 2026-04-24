@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, useCallback } from 'react';
-import { createContext, memo, use, useMemo, useState } from 'react';
+import { createContext, memo, useContext, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ChatGroupWizard } from '@/components/ChatGroupWizard';
@@ -43,7 +43,7 @@ interface MemberSelectionCallbacks {
 const AgentModalContext = createContext<AgentModalContextValue | null>(null);
 
 export const useAgentModal = () => {
-  const context = use(AgentModalContext);
+  const context = useContext(AgentModalContext);
   if (!context) {
     throw new Error('useAgentModal must be used within AgentModalProvider');
   }
@@ -51,7 +51,7 @@ export const useAgentModal = () => {
 };
 
 export const useOptionalAgentModal = () => {
-  return use(AgentModalContext);
+  return useContext(AgentModalContext);
 };
 
 interface CreateModalRendererProps {

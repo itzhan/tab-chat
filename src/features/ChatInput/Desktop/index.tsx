@@ -4,7 +4,7 @@ import { type ChatInputProps } from '@lobehub/editor/react';
 import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
 import { Center, Flexbox, Text } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
-import { type ReactNode, use } from 'react';
+import { type ReactNode, useContext } from 'react';
 import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -89,7 +89,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     sendAreaPrefix,
   }) => {
     const { t } = useTranslation('chat');
-    const layoutContainerRef = use(LayoutContainerContext);
+    const layoutContainerRef = useContext(LayoutContainerContext);
     const [chatInputHeight, updateSystemStatus] = useGlobalStore((s) => [
       systemStatusSelectors.chatInputHeight(s),
       s.updateSystemStatus,

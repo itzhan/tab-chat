@@ -3,7 +3,7 @@
 import { type KlavisServerType, type LobehubSkillProviderType } from '@lobechat/const';
 import { type Klavis } from 'klavis';
 import type React from 'react';
-import { createContext, use } from 'react';
+import { createContext, useContext } from 'react';
 
 export interface DetailContextValue {
   author: string;
@@ -26,7 +26,7 @@ export interface DetailContextValue {
 export const DetailContext = createContext<DetailContextValue | null>(null);
 
 export const useDetailContext = () => {
-  const context = use(DetailContext);
+  const context = useContext(DetailContext);
   if (!context) {
     throw new Error('useDetailContext must be used within DetailProvider');
   }

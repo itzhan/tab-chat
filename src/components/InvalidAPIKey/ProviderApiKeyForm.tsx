@@ -1,7 +1,7 @@
 import { Button, Icon } from '@lobehub/ui';
 import { Loader2Icon, Network } from 'lucide-react';
 import { type ReactNode } from 'react';
-import { memo, use, useState } from 'react';
+import { memo, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FormInput, FormPassword } from '@/components/FormInput';
@@ -30,7 +30,7 @@ const ProviderApiKeyForm = memo<ProviderApiKeyFormProps>(
     const { apiKey, baseURL, setConfig } = useApiKey(provider);
     const { showOpenAIProxyUrl } = useServerConfigStore(featureFlagsSelectors);
     const providerName = useProviderName(provider);
-    const { loading } = use(LoadingContext);
+    const { loading } = useContext(LoadingContext);
 
     return (
       <FormAction
