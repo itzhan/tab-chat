@@ -124,7 +124,10 @@ function sharedManualChunks(id: string): string | undefined {
   ) {
     return 'vendor-markdown';
   }
-  if (nm.startsWith('shiki/') || nm.startsWith('@shikijs/')) return 'vendor-shiki';
+  // NOTE: don't manualChunk shiki. It pulls ~15MB of grammar/theme source; forcing it
+  // into a single chunk yields a 19MB file that PWA workbox rejects and browsers can't
+  // stream efficiently. Leave it to rollup's default splitting (one chunk per language/
+  // theme), which is what shiki was designed for.
 
   // PDF (huge, only for file viewer)
   if (
