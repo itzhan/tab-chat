@@ -4,7 +4,11 @@ import { ChatErrorType } from '@lobechat/types';
 
 import { checkAuth } from '@/app/(backend)/middleware/auth';
 import { createTraceOptions, initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
-import { checkMessageQuota, recordMessageUsage } from '@/server/modules/QuotaGuard';
+import {
+  checkMessageQuota,
+  isCallerUsingOwnApiKey,
+  recordMessageUsage,
+} from '@/server/modules/QuotaGuard';
 import { type ChatStreamPayload } from '@/types/openai/chat';
 import { createErrorResponse } from '@/utils/errorResponse';
 import { getTracePayload } from '@/utils/trace';
@@ -26,7 +30,11 @@ export const POST = checkAuth(async (req: Request, { params, userId, serverDB })
     const data = (await req.json()) as ChatStreamPayload;
 
     // ============  2.5 commercial quota: check BEFORE model call (fail fast)  ============ //
-    if (provider && data.model) {
+    // BYO-key: when the user is using their own API key (admin enabled
+    // `allowUserApiKey`), the cost is paid upstream via the user's key —
+    // skip platform quota check and usage recording entirely.
+    const isBYO = provider ? await isCallerUsingOwnApiKey(serverDB, userId, provider) : false;
+    if (!isBYO && provider && data.model) {
       const decision = await checkMessageQuota(serverDB, userId, provider, data.model);
       quotaDecision = { useBoost: decision.useBoost };
     }

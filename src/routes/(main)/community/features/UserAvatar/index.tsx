@@ -1,9 +1,7 @@
 'use client';
 
-import { Avatar, Button, Skeleton } from '@lobehub/ui';
-import { UserCircleIcon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Avatar, Skeleton } from '@lobehub/ui';
+import { memo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useMarketAuth, useMarketUserProfile } from '@/layout/AuthProvider/MarketAuth';
@@ -35,10 +33,8 @@ const checkNeedsProfileSetup = (
 };
 
 const UserAvatar = memo(() => {
-  const { t } = useTranslation('discover');
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const { isAuthenticated, isLoading, getCurrentUserInfo, signIn } = useMarketAuth();
+  const { isAuthenticated, isLoading, getCurrentUserInfo } = useMarketAuth();
 
   const enableMarketTrustedClient = useServerConfigStore(
     serverConfigSelectors.enableMarketTrustedClient,
@@ -53,19 +49,6 @@ const UserAvatar = memo(() => {
   // Check whether profile setup is needed
   const needsProfileSetup = checkNeedsProfileSetup(enableMarketTrustedClient, userProfile);
 
-  const handleSignIn = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Unified call to signIn, which shows a confirmation dialog first
-      // In trustedClient mode, confirmation opens the ProfileSetupModal
-      // In OIDC mode, confirmation triggers the OIDC flow
-      await signIn();
-    } catch {
-      // User cancelled or error occurred
-    }
-    setLoading(false);
-  }, [signIn]);
-
   const handleAvatarClick = useCallback(() => {
     const profileUserName = userProfile?.userName || userProfile?.namespace;
     if (profileUserName) {
@@ -77,22 +60,10 @@ const UserAvatar = memo(() => {
     return <Skeleton.Avatar active shape={'square'} size={28} style={{ borderRadius: 6 }} />;
   }
 
-  // If trustedClient is enabled, skip the "become a creator" button and show the avatar directly
-  // Otherwise, show the login button when unauthenticated or profile setup is needed
+  // "Become a creator" entry is disabled for this deployment — do not render
+  // the login button, and hide the avatar when the user has no market profile.
   if (!enableMarketTrustedClient && (!isAuthenticated || needsProfileSetup)) {
-    return (
-      <Button
-        icon={UserCircleIcon}
-        loading={loading}
-        type="text"
-        style={{
-          height: 30,
-        }}
-        onClick={handleSignIn}
-      >
-        {t('user.login')}
-      </Button>
-    );
+    return null;
   }
 
   // Get avatar from user profile (fetched via SWR with caching)

@@ -10,7 +10,7 @@ import { TopicModel } from '@/database/models/topic';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
-import { checkMessageQuota } from '@/server/modules/QuotaGuard';
+import { checkMessageQuota, isCallerUsingOwnApiKey } from '@/server/modules/QuotaGuard';
 import { resolveContext } from '@/server/routers/lambda/_helpers/resolveContext';
 import { AiChatService } from '@/server/services/aiChat';
 import { FileService } from '@/server/services/file';
@@ -75,7 +75,12 @@ export const aiChatRouter = router({
       const quotaProvider = input.newAssistantMessage.provider;
       const quotaModel = input.newAssistantMessage.model;
       if (quotaProvider && quotaModel) {
-        await checkMessageQuota(ctx.serverDB, ctx.userId, quotaProvider, quotaModel);
+        // BYO-key: skip quota pre-check when the user is consuming their own
+        // upstream API key (admin enabled `allowUserApiKey` + user filled key).
+        const isBYO = await isCallerUsingOwnApiKey(ctx.serverDB, ctx.userId, quotaProvider);
+        if (!isBYO) {
+          await checkMessageQuota(ctx.serverDB, ctx.userId, quotaProvider, quotaModel);
+        }
       }
 
       let sessionId = input.sessionId;

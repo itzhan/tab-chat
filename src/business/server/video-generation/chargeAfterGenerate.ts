@@ -1,5 +1,9 @@
 import { getServerDB } from '@/database/core/db-adaptor';
-import { checkMessageQuota, recordMessageUsage } from '@/server/modules/QuotaGuard';
+import {
+  checkMessageQuota,
+  isCallerUsingOwnApiKey,
+  recordMessageUsage,
+} from '@/server/modules/QuotaGuard';
 
 interface ChargeParams {
   computePriceParams?: { generateAudio?: boolean };
@@ -34,6 +38,8 @@ export async function chargeAfterGenerate(params: ChargeParams): Promise<void> {
 
   try {
     const db = await getServerDB();
+
+    if (await isCallerUsingOwnApiKey(db, userId, provider)) return;
 
     let useBoost = false;
     try {

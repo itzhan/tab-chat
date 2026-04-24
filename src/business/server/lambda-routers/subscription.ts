@@ -8,7 +8,11 @@ import {
 } from '@/database/models/subscription';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { checkMessageQuota, recordMessageUsage } from '@/server/modules/QuotaGuard';
+import {
+  checkMessageQuota,
+  isCallerUsingOwnApiKey,
+  recordMessageUsage,
+} from '@/server/modules/QuotaGuard';
 
 const userProc = authedProcedure.use(serverDatabase);
 
@@ -60,6 +64,10 @@ export const subscriptionRouter = router({
       // Re-run check to make sure the caller still has quota — this also returns
       // the boost-vs-plan decision used for the deduction.
       try {
+        // BYO-key: user is using their own upstream key — no platform charge.
+        if (await isCallerUsingOwnApiKey(ctx.serverDB, ctx.userId, input.providerId)) {
+          return { ok: true };
+        }
         const decision = await checkMessageQuota(
           ctx.serverDB,
           ctx.userId,

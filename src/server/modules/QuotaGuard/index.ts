@@ -9,6 +9,8 @@ import {
 import { UserModel } from '@/database/models/user';
 import type { LobeChatDatabase } from '@/database/type';
 
+export { isCallerUsingOwnApiKey } from './isBYOKey';
+
 export const QUOTA_EXCEEDED_CODE = 'QUOTA_EXCEEDED' as const;
 
 export interface QuotaCheckResult {

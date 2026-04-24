@@ -1,7 +1,6 @@
 import { BUILTIN_AGENT_SLUGS } from '@lobechat/builtin-agents';
 import { type ButtonProps } from '@lobehub/ui';
 import { Button, Center, Tooltip } from '@lobehub/ui';
-import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { BotIcon, ImageIcon, PenLineIcon, VideoIcon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
@@ -32,7 +31,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 type StarterTitleKey =
   | 'starter.createAgent'
-  | 'starter.createGroup'
   | 'starter.write'
   | 'starter.imageGeneration'
   | 'starter.videoGeneration'
@@ -65,11 +63,6 @@ const StarterList = memo(() => {
         icon: BotIcon,
         key: 'agent',
         titleKey: 'starter.createAgent',
-      },
-      {
-        icon: GroupBotSquareIcon,
-        key: 'group',
-        titleKey: 'starter.createGroup',
       },
       {
         icon: PenLineIcon,

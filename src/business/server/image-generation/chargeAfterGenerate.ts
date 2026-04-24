@@ -1,5 +1,9 @@
 import { getServerDB } from '@/database/core/db-adaptor';
-import { checkMessageQuota, recordMessageUsage } from '@/server/modules/QuotaGuard';
+import {
+  checkMessageQuota,
+  isCallerUsingOwnApiKey,
+  recordMessageUsage,
+} from '@/server/modules/QuotaGuard';
 import { type ModelPerformance, type ModelUsage } from '@/types/index';
 
 interface ChargeParams {
@@ -36,6 +40,10 @@ export async function chargeAfterGenerate(params: ChargeParams): Promise<void> {
 
   try {
     const db = await getServerDB();
+
+    // BYO-key: caller used their own API key for this provider — cost was
+    // paid upstream, don't touch platform quota or usage records.
+    if (await isCallerUsingOwnApiKey(db, userId, provider)) return;
 
     let useBoost = false;
     try {

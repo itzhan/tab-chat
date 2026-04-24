@@ -166,12 +166,6 @@ const RuntimeConfig = memo(() => {
         ]
       : []),
     {
-      desc: t('runtimeEnv.mode.cloudDesc'),
-      icon: CloudIcon,
-      label: t('runtimeEnv.mode.cloud'),
-      mode: 'cloud',
-    },
-    {
       desc: t('runtimeEnv.mode.noneDesc'),
       icon: MonitorOffIcon,
       label: t('runtimeEnv.mode.none'),
