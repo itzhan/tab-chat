@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, memo, type ReactNode, use } from 'react';
+import { createContext, memo, type ReactNode, useContext } from 'react';
 
 import { type GlobalServerConfig } from '@/types/serverConfig';
 
@@ -36,7 +36,8 @@ export const AuthServerConfigProvider = memo<Props>(
 );
 
 export function useAuthServerConfigStore<T>(selector: (state: AuthServerConfigState) => T): T {
-  const state = use(AuthServerConfigContext);
+  // eslint-disable-next-line @eslint-react/no-use-context
+  const state = useContext(AuthServerConfigContext);
   if (!state) throw new Error('Missing AuthServerConfigProvider');
   return selector(state);
 }

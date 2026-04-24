@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, use } from 'react';
+import { createContext, useContext } from 'react';
 
 /**
  * Capabilities that can be injected into shared tool render components.
@@ -23,4 +23,5 @@ const ToolRenderContext = createContext<ToolRenderCapabilities>({});
 
 export const ToolRenderProvider = ToolRenderContext.Provider;
 
-export const useToolRenderCapabilities = () => use(ToolRenderContext);
+// eslint-disable-next-line @eslint-react/no-use-context
+export const useToolRenderCapabilities = () => useContext(ToolRenderContext);
