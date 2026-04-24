@@ -10,25 +10,39 @@ const headers = {
   }),
 };
 
+const lazyClient = <T extends object>(factory: () => T): T => {
+  let instance: T | undefined;
+  return new Proxy({} as T, {
+    get(_t, prop, receiver) {
+      if (!instance) instance = factory();
+      return Reflect.get(instance as object, prop, receiver);
+    },
+  });
+};
+
 /**
  * QStash client with Vercel Deployment Protection bypass headers.
- * Use as `qstashClient` option in Upstash Workflow `serve()`.
- *
- * @see https://upstash.com/docs/workflow/troubleshooting/vercel
+ * Lazily instantiated on first access so missing QSTASH_TOKEN only throws/warns
+ * when workflow endpoints are actually invoked.
  */
-export const qstashClient = new Client({
-  headers,
-  token: process.env.QSTASH_TOKEN!,
-});
+export const qstashClient = lazyClient(
+  () =>
+    new Client({
+      headers,
+      token: process.env.QSTASH_TOKEN!,
+    }),
+);
 
 /**
  * Workflow client with Vercel Deployment Protection bypass headers.
- * Use for triggering workflows via `workflowClient.trigger()`.
  */
-export const workflowClient = new WorkflowClient({
-  headers,
-  token: process.env.QSTASH_TOKEN!,
-});
+export const workflowClient = lazyClient(
+  () =>
+    new WorkflowClient({
+      headers,
+      token: process.env.QSTASH_TOKEN!,
+    }),
+);
 
 /**
  * Verify QStash signature using Receiver.

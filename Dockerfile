@@ -73,8 +73,6 @@ COPY package.json pnpm-workspace.yaml ./
 COPY .npmrc ./
 COPY packages ./packages
 COPY patches ./patches
-# bring in desktop workspace manifest so pnpm can resolve it
-COPY apps/desktop/src/main/package.json ./apps/desktop/src/main/package.json
 
 RUN set -e && \
     if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \

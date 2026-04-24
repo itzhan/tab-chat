@@ -56,15 +56,17 @@ export const createI18nNext = (lang?: string) => {
     init: (params: { initAsync?: boolean } = {}) => {
       const { initAsync = true } = params;
       const initialLang = normalizeLocale(lang);
-      const bundledLanguageResources =
-        initialLang === DEFAULT_LANG
-          ? {
-              [DEFAULT_LANG]: defaultResources,
-            }
-          : {
-              [DEFAULT_LANG]: defaultResources,
-              [initialLang]: createBundledResources(),
-            };
+      const bundledLanguageResources: Record<
+        string,
+        ReturnType<typeof createBundledResources>
+      > = initialLang === DEFAULT_LANG
+        ? {
+            [DEFAULT_LANG]: defaultResources,
+          }
+        : {
+            [DEFAULT_LANG]: defaultResources,
+            [initialLang]: createBundledResources(),
+          };
 
       const initPromise = instance.init({
         debug: debugMode,

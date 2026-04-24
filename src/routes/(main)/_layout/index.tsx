@@ -28,7 +28,6 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 
 import DesktopHome from '../home';
 import DesktopHomeLayout from '../home/_layout';
-import DesktopAutoOidcOnFirstOpen from './DesktopAutoOidcOnFirstOpen';
 import DesktopLayoutContainer from './DesktopLayoutContainer';
 import RegisterHotkeys from './RegisterHotkeys';
 import { styles } from './style';
@@ -49,7 +48,6 @@ const Layout: FC = () => {
   return (
     <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
       <Suspense fallback={null}>
-        {isDesktop && <DesktopAutoOidcOnFirstOpen />}
         {isDesktop && <DesktopNavigationBridge />}
         {isDesktop && <DesktopFileMenuBridge />}
         {showCloudPromotion && <CloudBanner />}

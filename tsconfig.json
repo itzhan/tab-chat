@@ -30,17 +30,7 @@
       }
     ]
   },
-  "exclude": [
-    "node_modules",
-    "apps/desktop/**",
-    "apps/device-gateway/**",
-    "apps/mobile/**",
-    "tmp",
-    "temp",
-    ".temp",
-    "e2e/**",
-    "knip.ts"
-  ],
+  "exclude": ["node_modules", "tmp", "temp", ".temp", "e2e/**", "knip.ts"],
   "include": [
     "src/**/*.d.ts",
     "src/**/*.ts",
@@ -61,9 +51,5 @@
     "next-env.d.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "references": [
-    {
-      "path": "./apps/desktop"
-    }
-  ]
+  "references": []
 }

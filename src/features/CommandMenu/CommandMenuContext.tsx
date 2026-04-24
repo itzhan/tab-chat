@@ -1,7 +1,7 @@
 'use client';
 
 import { type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { createContext, use, useCallback, useMemo, useState } from 'react';
+import { createContext, useCallback, useMemo, useState } from 'react';
 
 import { type MenuContext, type PageType, type SelectedAgent } from './types';
 import { detectContext } from './utils/context';

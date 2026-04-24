@@ -7,8 +7,6 @@ import BusinessPanelContent from '@/business/client/features/User/BusinessPanelC
 import Menu from '@/components/Menu';
 import { isDesktop } from '@/const/version';
 import UserInfo from '@/features/User/UserInfo';
-import { navigateToDesktopOnboarding } from '@/routes/(desktop)/desktop-onboarding/navigation';
-import { DesktopOnboardingScreen } from '@/routes/(desktop)/desktop-onboarding/types';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
@@ -28,21 +26,6 @@ const PanelContent: FC<{ closePopover: () => void }> = ({ closePopover }) => {
   };
 
   const handleSignOut = async () => {
-    if (isDesktop) {
-      closePopover();
-
-      try {
-        const { remoteServerService } = await import('@/services/electron/remoteServer');
-        await remoteServerService.clearRemoteServerConfig();
-      } catch (error) {
-        console.error(error);
-      } finally {
-        signOut();
-        navigateToDesktopOnboarding(DesktopOnboardingScreen.Login);
-      }
-      return;
-    }
-
     signOut();
     closePopover();
   };

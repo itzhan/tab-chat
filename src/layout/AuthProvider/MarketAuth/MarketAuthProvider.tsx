@@ -2,7 +2,7 @@
 
 import { App } from 'antd';
 import { type ReactNode } from 'react';
-import { createContext, use, useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mutate as globalMutate } from 'swr';
 

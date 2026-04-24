@@ -1204,7 +1204,7 @@ describe('resolveAgentConfig', () => {
       vi.spyOn(
         userSelectors.userGeneralSettingsSelectors,
         'currentResponseLanguage',
-      ).mockReturnValue('ja-JP');
+      ).mockReturnValue('zh-CN');
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
         () =>
           ({

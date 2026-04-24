@@ -2,7 +2,6 @@
 
 import {
   closestCenter,
-  type CollisionDetection,
   defaultDropAnimationSideEffects,
   DndContext,
   type DragEndEvent,
@@ -24,7 +23,7 @@ import { ActionIcon, Button, Flexbox, Icon, Text, Tooltip } from '@lobehub/ui';
 import { Modal } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Eye, EyeOff, GripVertical, PinIcon, RotateCcw } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
@@ -51,9 +50,12 @@ const ALL_SIDEBAR_ITEMS: SidebarItemConfig[] = [
   { id: 'pages', labelKey: 'tab.pages', routeId: 'page' },
   { id: 'recents', labelKey: 'recents' },
   { alwaysVisible: true, id: 'agent', labelKey: 'navPanel.agent' },
+  { id: 'image', labelKey: 'tab.image', routeId: 'image' },
+  { id: 'video', labelKey: 'tab.video', routeId: 'video' },
   { id: 'community', labelKey: 'tab.community', routeId: 'community' },
   { id: 'resource', labelKey: 'tab.resource', routeId: 'resource' },
   { id: 'memory', labelKey: 'tab.memory', routeId: 'memory' },
+  { id: 'membership', labelKey: 'tab.membership', routeId: 'membership' },
 ];
 
 const ITEM_MAP = new Map(ALL_SIDEBAR_ITEMS.map((item) => [item.id, item]));
@@ -252,25 +254,6 @@ const CustomizeSidebarContent = memo(() => {
     setItems(storeItems);
   }, [storeItems]);
 
-  // Derive outer (with group placeholder) and inner (accordion items)
-  const { innerItems, outerItems } = useMemo(() => {
-    const outer: string[] = [];
-    const inner: string[] = [];
-    let insertedGroup = false;
-    for (const id of items) {
-      if (isAccordionKey(id)) {
-        inner.push(id);
-        if (!insertedGroup) {
-          outer.push(ACCORDION_GROUP_ID);
-          insertedGroup = true;
-        }
-      } else {
-        outer.push(id);
-      }
-    }
-    return { innerItems: inner, outerItems: outer };
-  }, [items]);
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
@@ -287,22 +270,6 @@ const CustomizeSidebarContent = memo(() => {
     [hiddenSections, updateSystemStatus],
   );
 
-  // Collision detection: restrict targets to the same container as the active item.
-  // - Active in inner (recents/agent) → only collide with inner items
-  // - Active in outer (pages/community/... or the group itself) → only collide with outer items
-  const collisionDetection = useCallback<CollisionDetection>((args) => {
-    const activeId = args.active.id as string;
-    const isInner = isAccordionKey(activeId);
-    const droppableContainers = args.droppableContainers.filter((c) => {
-      const id = c.id as string;
-      const targetIsInner = isAccordionKey(id);
-      return isInner === targetIsInner;
-    });
-    return closestCenter({ ...args, droppableContainers });
-  }, []);
-
-  // ---- DnD handlers ----
-
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   }, []);
@@ -313,28 +280,15 @@ const CustomizeSidebarContent = memo(() => {
       setActiveId(null);
       if (!over || active.id === over.id) return;
 
-      const activeKey = active.id as string;
-      const overKey = over.id as string;
+      const oldIdx = items.indexOf(active.id as string);
+      const newIdx = items.indexOf(over.id as string);
+      if (oldIdx === -1 || newIdx === -1) return;
 
-      let next: string[];
-      if (isAccordionKey(activeKey)) {
-        // Inner reorder (recents ↔ agent)
-        const oldIdx = innerItems.indexOf(activeKey);
-        const newIdx = innerItems.indexOf(overKey);
-        if (oldIdx === -1 || newIdx === -1) return;
-        next = flattenItems(outerItems, arrayMove(innerItems, oldIdx, newIdx));
-      } else {
-        // Outer reorder (pages/community/... or the whole accordion group)
-        const oldIdx = outerItems.indexOf(activeKey);
-        const newIdx = outerItems.indexOf(overKey);
-        if (oldIdx === -1 || newIdx === -1) return;
-        next = flattenItems(arrayMove(outerItems, oldIdx, newIdx), innerItems);
-      }
-
+      const next = arrayMove(items, oldIdx, newIdx);
       setItems(next);
       updateSystemStatus({ sidebarItems: next });
     },
-    [innerItems, outerItems, updateSystemStatus],
+    [items, updateSystemStatus],
   );
 
   const handleDragCancel = useCallback(() => {
@@ -348,26 +302,14 @@ const CustomizeSidebarContent = memo(() => {
 
   return (
     <DndContext
-      collisionDetection={collisionDetection}
+      collisionDetection={closestCenter}
       sensors={sensors}
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
       onDragStart={handleDragStart}
     >
-      <SortableContext items={outerItems} strategy={verticalListSortingStrategy}>
-        <Flexbox gap={2}>
-          {outerItems.map((id) =>
-            id === ACCORDION_GROUP_ID ? (
-              <AccordionGroup key={id}>
-                <SortableContext items={innerItems} strategy={verticalListSortingStrategy}>
-                  {innerItems.map(renderItem)}
-                </SortableContext>
-              </AccordionGroup>
-            ) : (
-              renderItem(id)
-            ),
-          )}
-        </Flexbox>
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
+        <Flexbox gap={2}>{items.map(renderItem)}</Flexbox>
       </SortableContext>
 
       {createPortal(

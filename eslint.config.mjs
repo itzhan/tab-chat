@@ -141,11 +141,4 @@ export default eslint(
       'no-console': 0,
     },
   },
-  // lobehub-cli - console output is the primary interface
-  {
-    files: ['apps/cli/**/*'],
-    rules: {
-      'no-console': 0,
-    },
-  },
 );

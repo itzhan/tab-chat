@@ -1,7 +1,7 @@
 'use client';
 
 import { Block, Flexbox, Icon, Tag, Text } from '@lobehub/ui';
-import { Button, message, Spin, Typography } from 'antd';
+import { Button, message, Spin, Tooltip, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import { CheckIcon, CrownIcon, ZapIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -47,6 +47,12 @@ const useStyles = createStyles(({ css, token }) => ({
     color: ${token.colorTextSecondary};
   `,
   container: css`
+    overflow-y: auto;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  `,
+  inner: css`
     width: 100%;
     max-width: 1200px;
     margin-block: 0;
@@ -89,110 +95,113 @@ const MembershipHomePage = memo(() => {
 
   return (
     <div className={styles.container}>
-      <Flexbox gap={24}>
-        <Flexbox gap={8}>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Icon icon={CrownIcon} size={24} />
-            <Title level={2} style={{ margin: 0 }}>
-              订阅中心
-            </Title>
+      <div className={styles.inner}>
+        <Flexbox gap={24}>
+          <Flexbox gap={8}>
+            <Flexbox horizontal align={'center'} gap={8}>
+              <Icon icon={CrownIcon} size={24} />
+              <Title level={2} style={{ margin: 0 }}>
+                订阅中心
+              </Title>
+            </Flexbox>
+            <Text type={'secondary'}>
+              升级套餐解锁更多模型和更高额度。
+              {mySub?.plan && (
+                <>
+                  {' '}
+                  当前套餐：
+                  <b>{mySub.plan.name}</b>
+                  {mySub.subscription?.expireAt
+                    ? `（到期时间：${new Date(mySub.subscription.expireAt).toLocaleDateString()}）`
+                    : ''}
+                </>
+              )}
+            </Text>
           </Flexbox>
-          <Text type={'secondary'}>
-            升级套餐解锁更多模型和更高额度。
-            {mySub?.plan && (
-              <>
-                {' '}
-                当前套餐：
-                <b>{mySub.plan.name}</b>
-                {mySub.subscription?.expireAt
-                  ? `（到期时间：${new Date(mySub.subscription.expireAt).toLocaleDateString()}）`
-                  : ''}
-              </>
-            )}
-          </Text>
-        </Flexbox>
 
-        {plansLoading ? (
-          <Flexbox align={'center'} height={240} justify={'center'}>
-            <Spin />
-          </Flexbox>
-        ) : !plans?.length ? (
-          <Block style={{ padding: 32, textAlign: 'center' }}>
-            <Text type={'secondary'}>暂无可购买的套餐，请联系管理员配置</Text>
-          </Block>
-        ) : (
-          <Flexbox horizontal gap={16} wrap={'wrap'}>
-            {plans.map((plan: any) => {
-              const isActive = plan.id === activePlanId;
-              return (
-                <div className={cx(styles.card, isActive && styles.cardHighlight)} key={plan.id}>
-                  <Flexbox gap={8}>
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <Title level={4} style={{ margin: 0 }}>
-                        {plan.name}
-                      </Title>
-                      {isActive && <Tag className={styles.activeTag}>当前套餐</Tag>}
-                      {plan.isDefault && !isActive && <Tag>默认</Tag>}
+          {plansLoading ? (
+            <Flexbox align={'center'} height={240} justify={'center'}>
+              <Spin />
+            </Flexbox>
+          ) : !plans?.length ? (
+            <Block style={{ padding: 32, textAlign: 'center' }}>
+              <Text type={'secondary'}>暂无可购买的套餐，请联系管理员配置</Text>
+            </Block>
+          ) : (
+            <Flexbox horizontal gap={16} wrap={'wrap'}>
+              {plans.map((plan: any) => {
+                const isActive = plan.id === activePlanId;
+                return (
+                  <div className={cx(styles.card, isActive && styles.cardHighlight)} key={plan.id}>
+                    <Flexbox gap={8}>
+                      <Flexbox horizontal align={'center'} gap={8}>
+                        <Title level={4} style={{ margin: 0 }}>
+                          {plan.name}
+                        </Title>
+                        {isActive && <Tag className={styles.activeTag}>当前套餐</Tag>}
+                        {plan.isDefault && !isActive && <Tag>默认</Tag>}
+                      </Flexbox>
+                      {plan.description && (
+                        <Text style={{ minHeight: 44 }} type={'secondary'}>
+                          {plan.description}
+                        </Text>
+                      )}
                     </Flexbox>
-                    {plan.description && (
-                      <Text style={{ minHeight: 44 }} type={'secondary'}>
-                        {plan.description}
-                      </Text>
-                    )}
-                  </Flexbox>
 
-                  <Flexbox gap={4}>
-                    <div className={styles.quotaRow}>
-                      <Icon icon={CheckIcon} size={14} />
-                      知识库容量：{formatStorage(plan.storageQuotaBytes)}
-                    </div>
-                    {plan.modelQuotas?.length ? (
-                      plan.modelQuotas.slice(0, 6).map((q: any) => (
-                        <div className={styles.quotaRow} key={`${q.providerId}-${q.modelId}`}>
-                          <Icon icon={CheckIcon} size={14} />
-                          {q.providerId === '*' && q.modelId === '*'
-                            ? '全部模型'
-                            : `${q.providerId}/${q.modelId}`}
-                          ：每月{q.monthlyLimit}次
-                        </div>
-                      ))
-                    ) : (
+                    <Flexbox gap={4}>
                       <div className={styles.quotaRow}>
                         <Icon icon={CheckIcon} size={14} />
-                        基础模型访问
+                        知识库容量：{formatStorage(plan.storageQuotaBytes)}
                       </div>
-                    )}
-                    {plan.modelQuotas?.length > 6 && (
-                      <div className={styles.quotaRow}>
-                        …共 {plan.modelQuotas.length} 项模型权益
-                      </div>
-                    )}
-                  </Flexbox>
+                      {plan.modelQuotas?.length ? (
+                        plan.modelQuotas.slice(0, 6).map((q: any) => (
+                          <div className={styles.quotaRow} key={`${q.providerId}-${q.modelId}`}>
+                            <Icon icon={CheckIcon} size={14} />
+                            {q.providerId === '*' && q.modelId === '*'
+                              ? '全部模型'
+                              : `${q.providerId}/${q.modelId}`}
+                            ：每月{q.monthlyLimit}次
+                          </div>
+                        ))
+                      ) : (
+                        <div className={styles.quotaRow}>
+                          <Icon icon={CheckIcon} size={14} />
+                          基础模型访问
+                        </div>
+                      )}
+                      {plan.modelQuotas?.length > 6 && (
+                        <div className={styles.quotaRow}>
+                          …共 {plan.modelQuotas.length} 项模型权益
+                        </div>
+                      )}
+                    </Flexbox>
 
-                  <Flexbox style={{ marginTop: 'auto' }}>
-                    <Button
-                      block
-                      disabled={isActive}
-                      loading={pendingPlan === plan.id}
-                      size={'large'}
-                      type={isActive ? 'default' : 'primary'}
-                      onClick={() => onPurchase(plan.id)}
-                    >
-                      {isActive ? '已开通' : '购买'}
-                    </Button>
-                  </Flexbox>
-                </div>
-              );
-            })}
-          </Flexbox>
-        )}
+                    <Flexbox style={{ marginTop: 'auto' }}>
+                      <Button
+                        block
+                        disabled={isActive}
+                        loading={pendingPlan === plan.id}
+                        size={'large'}
+                        type={isActive ? 'default' : 'primary'}
+                        onClick={() => onPurchase(plan.id)}
+                      >
+                        {isActive ? '已开通' : '购买'}
+                      </Button>
+                    </Flexbox>
+                  </div>
+                );
+              })}
+            </Flexbox>
+          )}
 
-        <BoostPackSection />
+          <BoostPackSection />
 
-        <Text style={{ fontSize: 12, marginTop: 24 }} type={'secondary'}>
-          支付渠道（支付宝 / 微信）正在接入中。点击「购买」会记录你的意向，开通后我们会主动联系你。
-        </Text>
-      </Flexbox>
+          <Text style={{ fontSize: 12, marginTop: 24 }} type={'secondary'}>
+            支付渠道（支付宝 /
+            微信）正在接入中。点击「购买」会记录你的意向，开通后我们会主动联系你。
+          </Text>
+        </Flexbox>
+      </div>
     </div>
   );
 });
@@ -256,13 +265,44 @@ const BoostPackSection = memo(() => {
             </Flexbox>
 
             <Flexbox gap={4}>
-              <div style={{ color: '#888', fontSize: 12 }}>包含模型（共享额度）：</div>
-              <Flexbox horizontal gap={4} wrap={'wrap'}>
-                {(pack.models ?? []).slice(0, 8).map((m: any) => (
-                  <Tag key={`${m.providerId}:${m.modelId}`}>{m.modelId}</Tag>
-                ))}
-                {pack.models?.length > 8 && <Tag>+{pack.models.length - 8}</Tag>}
-              </Flexbox>
+              <div style={{ color: '#888', fontSize: 12 }}>
+                包含模型（共享额度，共 {pack.models?.length ?? 0} 个）：
+              </div>
+              <Tooltip
+                overlayInnerStyle={{ maxHeight: 420, overflowY: 'auto', padding: 12 }}
+                overlayStyle={{ maxWidth: 360 }}
+                placement={'top'}
+                title={
+                  <Flexbox gap={10}>
+                    {Object.entries(
+                      (pack.models ?? []).reduce((acc: Record<string, string[]>, m: any) => {
+                        (acc[m.providerId] ??= []).push(m.modelId);
+                        return acc;
+                      }, {}),
+                    ).map(([providerId, models]) => (
+                      <Flexbox gap={4} key={providerId}>
+                        <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>
+                          {providerId}
+                        </div>
+                        <Flexbox horizontal gap={4} wrap={'wrap'}>
+                          {(models as string[]).map((id) => (
+                            <Tag key={id} style={{ margin: 0 }}>
+                              {id}
+                            </Tag>
+                          ))}
+                        </Flexbox>
+                      </Flexbox>
+                    ))}
+                  </Flexbox>
+                }
+              >
+                <Flexbox horizontal gap={4} style={{ cursor: 'help' }} wrap={'wrap'}>
+                  {(pack.models ?? []).slice(0, 8).map((m: any) => (
+                    <Tag key={`${m.providerId}:${m.modelId}`}>{m.modelId}</Tag>
+                  ))}
+                  {pack.models?.length > 8 && <Tag>+{pack.models.length - 8}</Tag>}
+                </Flexbox>
+              </Tooltip>
               <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
                 每单位 {pack.quotaPerUnit} 次
               </div>

@@ -143,15 +143,10 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent }
   const shouldUseMotion = !isPanelLayerMotionDisabled(animationMode);
   const handleSizeChange = useNavPanelSizeChangeHandler();
 
-  const defaultWidthRef = useRef(0);
-  if (defaultWidthRef.current === 0) {
-    defaultWidthRef.current = systemStatusSelectors.leftPanelWidth(useGlobalStore.getState());
-  }
-
   const defaultSize = useMemo(
     () => ({
       height: '100%',
-      width: defaultWidthRef.current,
+      width: 240,
     }),
     [],
   );

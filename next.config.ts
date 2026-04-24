@@ -14,7 +14,6 @@ const vercelConfig = {
       'public/_spa/**',
       'dist/desktop/**',
       'dist/mobile/**',
-      'apps/desktop/**',
       'packages/database/migrations/**',
     ],
   },
