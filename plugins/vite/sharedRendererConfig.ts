@@ -27,6 +27,23 @@ const DAYJS_LOCALE: Record<string, string> = {
   'zh-cn': 'zh-CN',
 };
 
+/**
+ * Aggressive vendor chunking for web deployment.
+ *
+ * Why: the default Vite chunking + LobeHub's desktop-first bundle produces a 9MB main
+ * chunk (all UI libs + heavy editors + markdown pipeline all merged together). On a web
+ * deployment over long-haul network, that's an instant 10+ second TTI.
+ *
+ * Strategy:
+ * - Carve out ONLY leaf-ish third-party libs (no app code here) into their own chunks.
+ * - Keep related libs together so a single parsed chunk gives a working feature
+ *   (e.g. all lexical/codemirror go in `vendor-editor` together).
+ * - Chunks too small (< ~30KB) are a net loss (RTT cost), so a handful of big ones
+ *   beats hundreds of tiny ones.
+ *
+ * IMPORTANT: never group app code or `model-bank` here — doing so creates facade
+ * chunks and circular-dep init crashes. Only node_modules.
+ */
 function sharedManualChunks(id: string): string | undefined {
   // i18n locale JSON/TS files
   const localeMatch = id.match(/\/locales\/([^/]+)\/([^/.]+)/);
@@ -42,6 +59,9 @@ function sharedManualChunks(id: string): string | undefined {
 
   if (!id.includes('node_modules')) return;
 
+  // Normalize path to make matches simpler — look at the `node_modules/...` tail.
+  const nm = id.slice(id.lastIndexOf('node_modules/') + 'node_modules/'.length);
+
   // antd locale → merge into i18n-{locale}
   const antdMatch = id.match(/antd\/es\/locale\/([^/.]+)\.js/);
   if (antdMatch) {
@@ -56,17 +76,165 @@ function sharedManualChunks(id: string): string | undefined {
     if (locale) return `i18n-${locale}`;
   }
 
+  // ───── React core (critical, loaded on every page, cache forever) ─────
+  if (
+    nm.startsWith('react/') ||
+    nm.startsWith('react-dom/') ||
+    nm.startsWith('scheduler/')
+  ) {
+    return 'vendor-react';
+  }
+  if (nm.startsWith('react-router/') || nm.startsWith('react-router-dom/')) {
+    return 'vendor-react-router';
+  }
+
+  // ───── UI libraries (always used, group together) ─────
+  if (nm.startsWith('@lobehub/ui/')) return 'vendor-lobehub-ui';
+  if (nm.startsWith('antd/') || nm.startsWith('antd-style/') || nm.startsWith('rc-')) {
+    return 'vendor-antd';
+  }
+  if (nm.startsWith('@ant-design/')) return 'vendor-ant-design';
+  if (nm.startsWith('@lobehub/icons/')) return 'vendor-lobehub-icons';
+
+  // ───── Heavy feature libs: only load when feature is used ─────
+  // Editor stack (Lexical + LobeHub editor + code editors)
+  if (
+    nm.startsWith('@lobehub/editor/') ||
+    nm.startsWith('lexical/') ||
+    nm.startsWith('@lexical/')
+  ) {
+    return 'vendor-editor-lexical';
+  }
+  if (nm.startsWith('@codemirror/') || nm.startsWith('codemirror/')) {
+    return 'vendor-editor-codemirror';
+  }
+  if (nm.startsWith('@codesandbox/sandpack-react/')) return 'vendor-sandpack';
+
+  // Markdown pipeline (react-markdown + remark/rehype + shiki for code blocks)
+  if (
+    nm.startsWith('react-markdown/') ||
+    nm.startsWith('remark-') ||
+    nm.startsWith('rehype-') ||
+    nm.startsWith('marked/') ||
+    nm.startsWith('mdast-') ||
+    nm.startsWith('unified/') ||
+    nm.startsWith('micromark') ||
+    nm.startsWith('hast-') ||
+    nm.startsWith('unist-')
+  ) {
+    return 'vendor-markdown';
+  }
+  if (nm.startsWith('shiki/') || nm.startsWith('@shikijs/')) return 'vendor-shiki';
+
+  // PDF (huge, only for file viewer)
+  if (
+    nm.startsWith('pdfjs-dist/') ||
+    nm.startsWith('react-pdf/') ||
+    nm.startsWith('@react-pdf/')
+  ) {
+    return 'vendor-pdf';
+  }
+  if (nm.startsWith('pdfkit/')) return 'vendor-pdfkit';
+
+  // 3D tag cloud
+  if (
+    nm.startsWith('three/') ||
+    nm.startsWith('@react-three/')
+  ) {
+    return 'vendor-three';
+  }
+
+  // Diagrams
+  if (nm.startsWith('mermaid/')) return 'vendor-mermaid';
+  if (nm.startsWith('@lobehub/charts/')) return 'vendor-charts';
+
+  // TTS / Audio
+  if (nm.startsWith('@lobehub/tts/')) return 'vendor-tts';
+
+  // Drag & drop
+  if (
+    nm.startsWith('@dnd-kit/') ||
+    nm.startsWith('@atlaskit/pragmatic-drag-and-drop')
+  ) {
+    return 'vendor-dnd';
+  }
+
+  // Terminal (xterm)
+  if (nm.startsWith('@xterm/')) return 'vendor-xterm';
+
+  // Analytics / telemetry
+  if (
+    nm.startsWith('@lobehub/analytics/') ||
+    nm.startsWith('posthog-js/') ||
+    nm.startsWith('@vercel/analytics/') ||
+    nm.startsWith('@vercel/speed-insights/')
+  ) {
+    return 'vendor-analytics';
+  }
+
+  // tRPC + React Query + state libs
+  if (
+    nm.startsWith('@trpc/') ||
+    nm.startsWith('@tanstack/react-query/') ||
+    nm.startsWith('superjson/')
+  ) {
+    return 'vendor-trpc';
+  }
+
+  // Better-auth
+  if (
+    nm.startsWith('better-auth/') ||
+    nm.startsWith('@better-auth/') ||
+    nm.startsWith('better-call/')
+  ) {
+    return 'vendor-auth';
+  }
+
+  // Editor-runtime / LobeHub market SDK / heavy LobeHub packages
+  if (nm.startsWith('@lobehub/market-sdk/')) return 'vendor-market-sdk';
+
+  // Canvas / image processing
+  if (nm.startsWith('@zumer/snapdom/') || nm.startsWith('chroma-js/')) {
+    return 'vendor-canvas-tools';
+  }
+
+  // Confetti / visuals
+  if (nm.startsWith('react-confetti/') || nm.startsWith('react-fast-marquee/')) {
+    return 'vendor-visuals';
+  }
+
+  // OGL (lighter-weight 3D used for some animated backgrounds)
+  if (nm.startsWith('ogl/')) return 'vendor-ogl';
+
+  // zod / schema validation
+  if (nm.startsWith('zod/') || nm.startsWith('zod-to-json-schema/')) return 'vendor-zod';
+
   // Lucide icons
-  if (id.includes('lucide-react')) return 'vendor-icons';
+  if (nm.startsWith('lucide-react/')) return 'vendor-icons';
 
   // es-toolkit
-  if (id.includes('es-toolkit')) return 'vendor-es-toolkit';
+  if (nm.startsWith('es-toolkit/')) return 'vendor-es-toolkit';
 
   // emotion (CSS-in-JS runtime)
-  if (id.includes('@emotion/')) return 'vendor-emotion';
+  if (nm.startsWith('@emotion/')) return 'vendor-emotion';
 
   // motion (framer-motion)
-  if (id.includes('/motion/') || id.includes('framer-motion')) return 'vendor-motion';
+  if (nm.startsWith('motion/') || nm.startsWith('framer-motion/')) return 'vendor-motion';
+
+  // i18next family
+  if (nm.startsWith('i18next/') || nm.startsWith('i18next-') || nm.startsWith('react-i18next/')) {
+    return 'vendor-i18next';
+  }
+
+  // SWR / Zustand / immer (small but core state)
+  if (
+    nm.startsWith('swr/') ||
+    nm.startsWith('zustand/') ||
+    nm.startsWith('zustand-utils/') ||
+    nm.startsWith('immer/')
+  ) {
+    return 'vendor-state';
+  }
 }
 
 export const sharedRollupOutput = {

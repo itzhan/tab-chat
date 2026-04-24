@@ -12,11 +12,15 @@ import { Outlet } from 'react-router-dom';
 import Loading from '@/components/Loading/BrandTextLoading';
 import { isDesktop } from '@/const/version';
 import { BANNER_HEIGHT } from '@/features/AlertBanner/CloudBanner';
-import DesktopFileMenuBridge from '@/features/DesktopFileMenuBridge';
-import DesktopNavigationBridge from '@/features/DesktopNavigationBridge';
-import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
-import TitleBar from '@/features/Electron/titlebar/TitleBar';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
+
+// Electron-only surfaces — lazy so the web bundle doesn't pay for them.
+// On web `isDesktop` is false, the lazy imports are never triggered, and the chunks
+// never download. On desktop they load once on first render.
+const DesktopFileMenuBridge = lazy(() => import('@/features/DesktopFileMenuBridge'));
+const DesktopNavigationBridge = lazy(() => import('@/features/DesktopNavigationBridge'));
+const AuthRequiredModal = lazy(() => import('@/features/Electron/AuthRequiredModal'));
+const TitleBar = lazy(() => import('@/features/Electron/titlebar/TitleBar'));
 import NavPanel from '@/features/NavPanel';
 import { useFeedbackModal } from '@/hooks/useFeedbackModal';
 import { usePlatform } from '@/hooks/usePlatform';
