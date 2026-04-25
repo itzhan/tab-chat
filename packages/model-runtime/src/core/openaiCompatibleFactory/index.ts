@@ -1098,6 +1098,17 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
         ...(reasoning || reasoning_effort
           ? {
               reasoning: {
+                // Ask upstream to stream reasoning summary by default. Without
+                // this, OpenAI's Responses API stays SSE-silent during the
+                // thinking phase: the user sees nothing for 30+ seconds AND
+                // any 60s-idle proxy in the chain (Express / nginx default)
+                // closes the connection → `TypeError: NetworkError when
+                // attempting to fetch resource` around the 60s mark.
+                // `summary: 'auto'` keeps `response.reasoning_summary_text.*`
+                // events flowing, which the protocol layer turns into
+                // visible reasoning chunks AND keeps the SSE stream alive.
+                // Caller-supplied `reasoning.summary` still wins.
+                summary: 'auto',
                 ...reasoning,
                 ...(reasoning_effort && { effort: reasoning_effort }),
               },

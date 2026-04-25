@@ -131,6 +131,38 @@ const transformOpenAIStream = (
         return { data: chunk.delta, id: chunk.item_id, type: 'reasoning' };
       }
 
+      // Raw reasoning text — Responses API emits these when reasoning is
+      // requested with `output: ['reasoning']` or via certain proxies that
+      // expose the raw thinking stream. Without forwarding, both:
+      //   1. the user can't see the model's thinking process
+      //   2. the SSE stream is fully silent during the thinking phase, so
+      //      any intermediate 60s-idle proxy (Express default, some
+      //      nginx configs) closes the connection → user sees
+      //      "NetworkError when attempting to fetch resource" at ~60s.
+      //
+      // SDK types lag the wire format — these case strings match what the
+      // OpenAI server actually sends.
+      // @ts-ignore
+      case 'response.reasoning_text.delta': {
+        if (!streamContext.startReasoning) streamContext.startReasoning = true;
+        return {
+          // @ts-ignore
+          data: chunk.delta ?? '',
+          // @ts-ignore
+          id: chunk.item_id ?? streamContext.id,
+          type: 'reasoning',
+        };
+      }
+      // @ts-ignore
+      case 'response.reasoning_text.done': {
+        return {
+          data: '',
+          // @ts-ignore
+          id: chunk.item_id ?? streamContext.id,
+          type: 'reasoning',
+        };
+      }
+
       case 'response.output_text.annotation.added': {
         const citations = chunk.annotation;
 
