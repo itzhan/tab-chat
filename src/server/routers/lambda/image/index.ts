@@ -9,6 +9,7 @@ import { type NewGeneration, type NewGenerationBatch } from '@/database/schemas'
 import { asyncTasks, generationBatches, generations } from '@/database/schemas';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { getPrimaryAdminUserId } from '@/server/modules/Admin/getPrimaryAdminUserId';
 import { createAsyncCaller } from '@/server/routers/async/caller';
 import { FileService } from '@/server/services/file';
 import {
@@ -65,9 +66,16 @@ export const imageRouter = router({
     // the prompt. Force imageNum=1 so we only create one generation row /
     // async task / upstream call; any extra images returned will be fanned
     // out into additional rows by the async router.
-    const aiProviderModel = new AiProviderModel(serverDB, userId);
-    const providerRow = await aiProviderModel.findById(provider).catch(() => null);
-    const paramlessImageMode = !!providerRow?.settings?.paramlessImageMode;
+    //
+    // Settings live on the *admin's* ai_providers row (it's a global policy
+    // the admin sets in the provider settings UI). Reading from the calling
+    // user's row would always return `false` for non-admin users — same
+    // pattern as `isCallerUsingOwnApiKey` in QuotaGuard.
+    const adminUserId = await getPrimaryAdminUserId(serverDB).catch(() => null);
+    const settingsOwnerId = adminUserId || userId;
+    const adminProviderModel = new AiProviderModel(serverDB, settingsOwnerId);
+    const adminProviderRow = await adminProviderModel.getAiProviderById(provider).catch(() => null);
+    const paramlessImageMode = !!adminProviderRow?.settings?.paramlessImageMode;
     const effectiveImageNum = paramlessImageMode ? 1 : imageNum;
     if (paramlessImageMode && imageNum !== 1) {
       log(
