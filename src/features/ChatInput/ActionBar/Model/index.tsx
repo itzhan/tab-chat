@@ -69,7 +69,13 @@ const ModelSwitch = memo(() => {
     aiModelSelectors.isModelHasExtendParams(model, provider),
   );
 
-  const showExtendParams = isDevMode && isModelHasExtendParams;
+  // Reasoning effort / verbosity / thinking-budget controls are real
+  // user-facing knobs (low/medium/high reasoning, etc) — not experimental
+  // dev features. The upstream `isDevMode` gate hid the cog icon from 99% of
+  // users who never flip dev mode on. Show it whenever the active model
+  // declares extendParams in its model card.
+  void isDevMode;
+  const showExtendParams = isModelHasExtendParams;
 
   const handleModelChange = useCallback(
     async (params: { model: string; provider: string }) => {
