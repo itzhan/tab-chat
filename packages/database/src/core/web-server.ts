@@ -29,7 +29,12 @@ If you don't have it, please run \`openssl rand -base64 32\` to create one.
   }
 
   if (serverDBEnv.DATABASE_DRIVER === 'node') {
-    const client = new NodePool({ connectionString });
+    // Pool sized via DATABASE_POOL_MAX (default 400 — see src/config/db.ts).
+    // The pg default of 10 was a hard ceiling on concurrent users.
+    const client = new NodePool({
+      connectionString,
+      max: serverDBEnv.DATABASE_POOL_MAX,
+    });
     return nodeDrizzle(client, { schema });
   }
 
