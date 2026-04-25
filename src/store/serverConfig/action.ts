@@ -17,17 +17,24 @@ export const createServerConfigSlice = (
 ) => new ServerConfigActionImpl(set, get, _api);
 
 export class ServerConfigActionImpl {
+  readonly #get: () => ServerConfigStore;
   readonly #set: Setter;
 
   constructor(set: Setter, get: () => ServerConfigStore, _api?: unknown) {
     void _api;
     this.#set = set;
-    void get;
+    this.#get = get;
   }
 
   useInitServerConfig = (): SWRResponse<GlobalRuntimeConfig> => {
+    // SSR already computed getServerGlobalConfig() and embedded it as
+    // window.__SERVER_CONFIG__, which the store provider seeded at mount time and
+    // which also flips serverConfigInit to true. In that case we skip the trpc
+    // round-trip entirely (it was a redundant 20s call on cold Lambda).
+    const alreadyInit = this.#get().serverConfigInit;
+
     return useOnlyFetchOnceSWR<GlobalRuntimeConfig>(
-      FETCH_SERVER_CONFIG_KEY,
+      alreadyInit ? null : FETCH_SERVER_CONFIG_KEY,
       () => globalService.getGlobalConfig(),
       {
         onError: () => {

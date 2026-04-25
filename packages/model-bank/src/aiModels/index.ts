@@ -1,85 +1,28 @@
 import { ENABLE_BUSINESS_FEATURES } from '@lobechat/business-const';
 
 import { type AiFullModelCard, type LobeDefaultAiModelListItem } from '../types/aiModel';
-import { default as ai21 } from './ai21';
-import { default as ai302 } from './ai302';
-import { default as ai360 } from './ai360';
-import { default as aihubmix } from './aihubmix';
-import { default as akashchat } from './akashchat';
 import { default as anthropic } from './anthropic';
-import { default as azure } from './azure';
-import { default as azureai } from './azureai';
-import { default as baichuan } from './baichuan';
-import { default as bailiancodingplan } from './bailianCodingPlan';
-import { default as bedrock } from './bedrock';
-import { default as bfl } from './bfl';
-import { default as cerebras } from './cerebras';
-import { default as cloudflare } from './cloudflare';
-import { default as cohere } from './cohere';
-import { default as cometapi } from './cometapi';
-import { default as comfyui } from './comfyui';
-import { default as deepseek } from './deepseek';
-import { default as fal } from './fal';
-import { default as fireworksai } from './fireworksai';
-import { default as giteeai } from './giteeai';
-import { default as github } from './github';
-import { default as githubcopilot } from './githubCopilot';
-import { default as glmcodingplan } from './glmCodingPlan';
-import { default as google } from './google';
-import { default as groq } from './groq';
-import { default as higress } from './higress';
-import { default as huggingface } from './huggingface';
-import { default as hunyuan } from './hunyuan';
-import { default as infiniai } from './infiniai';
-import { default as internlm } from './internlm';
-import { default as jina } from './jina';
-import { default as kimicodingplan } from './kimiCodingPlan';
-import { default as lmstudio } from './lmstudio';
 import { default as lobehub } from './lobehub/index';
-import { default as longcat } from './longcat';
-import { default as minimax } from './minimax';
-import { default as minimaxcodingplan } from './minimaxCodingPlan';
-import { default as mistral } from './mistral';
-import { default as modelscope } from './modelscope';
-import { default as moonshot } from './moonshot';
-import { default as nebius } from './nebius';
-import { default as newapi } from './newapi';
-import { default as novita } from './novita';
-import { default as nvidia } from './nvidia';
-import { default as ollama } from './ollama';
-import { default as ollamacloud } from './ollamacloud';
 import { default as openai } from './openai';
-import { default as openrouter } from './openrouter';
-import { default as perplexity } from './perplexity';
-import { default as ppio } from './ppio';
-import { default as qiniu } from './qiniu';
-import { default as qwen } from './qwen';
-import { default as replicate } from './replicate';
-import { default as sambanova } from './sambanova';
-import { default as search1api } from './search1api';
-import { default as sensenova } from './sensenova';
-import { default as siliconcloud } from './siliconcloud';
-import { default as spark } from './spark';
-import { default as stepfun } from './stepfun';
-import { default as straico } from './straico';
-import { default as streamlake } from './streamlake';
-import { default as taichu } from './taichu';
-import { default as tencentcloud } from './tencentcloud';
-import { default as togetherai } from './togetherai';
-import { default as upstage } from './upstage';
-import { default as v0 } from './v0';
-import { default as vercelaigateway } from './vercelaigateway';
-import { default as vertexai } from './vertexai';
-import { default as vllm } from './vllm';
-import { default as volcengine } from './volcengine';
-import { default as volcenginecodingplan } from './volcengineCodingPlan';
-import { default as wenxin } from './wenxin';
 import { default as xai } from './xai';
-import { default as xiaomimimo } from './xiaomimimo';
-import { default as xinference } from './xinference';
-import { default as zenmux } from './zenmux';
-import { default as zeroone } from './zeroone';
-import { default as zhipu } from './zhipu';
+
+// CURATED PROVIDER SET (web fork): only OpenAI, Anthropic (Claude), and xAI
+// (Grok) are statically pulled into LOBE_DEFAULT_MODEL_LIST so the client
+// bundle only carries those catalogs (~15MB → ~few hundred KB).
+//
+// Named re-exports below are kept for ALL providers because:
+//   1) `model-runtime` adapter files (server-side request proxies) reference
+//      individual provider catalogs by named import for runtime metadata
+//      (max_tokens, model abilities, etc).
+//   2) Server-side `genServerAiProviderConfig` does `import * as AiModels` and
+//      indexes by enum value — it expects every ModelProvider to resolve.
+// These re-exports are pure pass-through (no top-level import binding), so
+// Rollup / Vite tree-shake them out of the CLIENT bundle when no client code
+// references the specific provider name. Server bundle keeps them all.
+//
+// To curate the user-visible menu: change this file's static imports +
+// LOBE_DEFAULT_MODEL_LIST and the matching list in `modelProviders/index.ts`.
+// Keep the re-exports unless you also want to delete the model-runtime adapter.
 
 type ModelsMap = Record<string, AiFullModelCard[]>;
 
@@ -101,87 +44,14 @@ const buildDefaultModelList = (map: ModelsMap): LobeDefaultAiModelListItem[] => 
 };
 
 export const LOBE_DEFAULT_MODEL_LIST = buildDefaultModelList({
-  ai21,
-  ai302,
-  ai360,
-  aihubmix,
-  akashchat,
   anthropic,
-  azure,
-  azureai,
-  baichuan,
-  bailiancodingplan,
-  bedrock,
-  bfl,
-  cerebras,
-  cloudflare,
-  cohere,
-  cometapi,
-  comfyui,
-  deepseek,
-  fal,
-  fireworksai,
-  giteeai,
-  github,
-  githubcopilot,
-  google,
-  glmcodingplan,
-  groq,
-  higress,
-  huggingface,
-  hunyuan,
-  infiniai,
-  internlm,
-  jina,
-  kimicodingplan,
-  lmstudio,
-  longcat,
   ...(ENABLE_BUSINESS_FEATURES ? { lobehub } : {}),
-  minimax,
-  minimaxcodingplan,
-  mistral,
-  modelscope,
-  moonshot,
-  nebius,
-  newapi,
-  novita,
-  nvidia,
-  ollama,
-  ollamacloud,
   openai,
-  openrouter,
-  perplexity,
-  ppio,
-  qiniu,
-  qwen,
-  replicate,
-  sambanova,
-  search1api,
-  sensenova,
-  siliconcloud,
-  spark,
-  stepfun,
-  straico,
-  streamlake,
-  taichu,
-  tencentcloud,
-  togetherai,
-  upstage,
-  v0,
-  vercelaigateway,
-  vertexai,
-  vllm,
-  volcengine,
-  volcenginecodingplan,
-  wenxin,
   xai,
-  xiaomimimo,
-  xinference,
-  zenmux,
-  zeroone,
-  zhipu,
 });
 
+// Re-exports kept for server-side adapter compatibility. Tree-shaken out of
+// client bundles when unreferenced.
 export { default as ai21 } from './ai21';
 export { default as ai302 } from './ai302';
 export { default as ai360 } from './ai360';

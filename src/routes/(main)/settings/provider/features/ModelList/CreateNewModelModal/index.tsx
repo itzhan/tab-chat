@@ -1,6 +1,6 @@
 import { Button, Modal } from '@lobehub/ui';
 import { type FormInstance } from 'antd';
-import { memo, useContext, useState } from 'react';
+import { memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAiInfraStore } from '@/store/aiInfra';
@@ -26,12 +26,12 @@ const ModelConfigModal = memo<ModelConfigModalProps>(({ open, setOpen }) => {
     setOpen(false);
   };
 
-  const { showDeployName } = useContext(ProviderSettingsContext);
+  const { showDeployName } = use(ProviderSettingsContext);
 
   return (
     <Modal
       destroyOnHidden
-      maskClosable
+      mask={{ closable: true }}
       open={open}
       title={t('providerModels.createNew.title')}
       zIndex={1251} // Select is 1150

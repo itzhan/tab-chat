@@ -77,23 +77,26 @@ function sharedManualChunks(id: string): string | undefined {
   }
 
   // ───── React core (critical, loaded on every page, cache forever) ─────
-  if (
-    nm.startsWith('react/') ||
-    nm.startsWith('react-dom/') ||
-    nm.startsWith('scheduler/')
-  ) {
+  if (nm.startsWith('react/') || nm.startsWith('react-dom/') || nm.startsWith('scheduler/')) {
     return 'vendor-react';
   }
   if (nm.startsWith('react-router/') || nm.startsWith('react-router-dom/')) {
     return 'vendor-react-router';
   }
 
-  // ───── UI libraries (always used, group together) ─────
-  if (nm.startsWith('@lobehub/ui/')) return 'vendor-lobehub-ui';
-  if (nm.startsWith('antd/') || nm.startsWith('antd-style/') || nm.startsWith('rc-')) {
-    return 'vendor-antd';
-  }
-  if (nm.startsWith('@ant-design/')) return 'vendor-ant-design';
+  // ───── UI libraries ─────
+  // INTENTIONALLY NOT CHUNKED: @lobehub/ui, antd, antd-style, rc-*, @ant-design/*.
+  // These are imported at module top-level across 250+ app files — @lobehub/ui
+  // components are referenced in module scope for static props, and more
+  // importantly `antd-style`'s `createStyles` / `createStaticStyles` are called
+  // at module load time in every styled component. Pinning them into a fixed
+  // vendor chunk creates an init cycle between the app chunk and the vendor
+  // chunk that surfaces as TDZ errors in minified code ("Ne is not a function",
+  // "Cannot access 'Ir' before initialization"). Same family as the
+  // zustand-utils issue. Let Rollup's default splitter handle them.
+  //
+  // Icons are leaf libraries (only referenced inside JSX, never at module top),
+  // so they're still safe to group.
   if (nm.startsWith('@lobehub/icons/')) return 'vendor-lobehub-icons';
 
   // ───── Heavy feature libs: only load when feature is used ─────
@@ -130,20 +133,13 @@ function sharedManualChunks(id: string): string | undefined {
   // theme), which is what shiki was designed for.
 
   // PDF (huge, only for file viewer)
-  if (
-    nm.startsWith('pdfjs-dist/') ||
-    nm.startsWith('react-pdf/') ||
-    nm.startsWith('@react-pdf/')
-  ) {
+  if (nm.startsWith('pdfjs-dist/') || nm.startsWith('react-pdf/') || nm.startsWith('@react-pdf/')) {
     return 'vendor-pdf';
   }
   if (nm.startsWith('pdfkit/')) return 'vendor-pdfkit';
 
   // 3D tag cloud
-  if (
-    nm.startsWith('three/') ||
-    nm.startsWith('@react-three/')
-  ) {
+  if (nm.startsWith('three/') || nm.startsWith('@react-three/')) {
     return 'vendor-three';
   }
 
@@ -155,10 +151,7 @@ function sharedManualChunks(id: string): string | undefined {
   if (nm.startsWith('@lobehub/tts/')) return 'vendor-tts';
 
   // Drag & drop
-  if (
-    nm.startsWith('@dnd-kit/') ||
-    nm.startsWith('@atlaskit/pragmatic-drag-and-drop')
-  ) {
+  if (nm.startsWith('@dnd-kit/') || nm.startsWith('@atlaskit/pragmatic-drag-and-drop')) {
     return 'vendor-dnd';
   }
 
@@ -218,26 +211,26 @@ function sharedManualChunks(id: string): string | undefined {
   // es-toolkit
   if (nm.startsWith('es-toolkit/')) return 'vendor-es-toolkit';
 
-  // emotion (CSS-in-JS runtime)
-  if (nm.startsWith('@emotion/')) return 'vendor-emotion';
+  // INTENTIONALLY NOT CHUNKED: @emotion/*. antd-style's `createStyles` /
+  // `createStaticStyles` reach into emotion at module init, and since
+  // antd-style itself is no longer pinned to a chunk, splitting emotion
+  // separately re-creates the exact TDZ cycle we're trying to avoid.
 
   // motion (framer-motion)
   if (nm.startsWith('motion/') || nm.startsWith('framer-motion/')) return 'vendor-motion';
 
-  // i18next family
-  if (nm.startsWith('i18next/') || nm.startsWith('i18next-') || nm.startsWith('react-i18next/')) {
-    return 'vendor-i18next';
-  }
+  // INTENTIONALLY NOT CHUNKED: i18next family. The global i18n instance is
+  // configured at module top-level in `src/locales/create.ts` and referenced
+  // by most UI files, so pinning it to a separate chunk creates the same
+  // cross-chunk init cycle.
 
-  // SWR / Zustand / immer (small but core state)
-  if (
-    nm.startsWith('swr/') ||
-    nm.startsWith('zustand/') ||
-    nm.startsWith('zustand-utils/') ||
-    nm.startsWith('immer/')
-  ) {
-    return 'vendor-state';
-  }
+  // NOTE: do NOT manualChunk zustand / zustand-utils / swr / immer. These are
+  // imported by app code all over (`store/**/store.ts`, selectors, hooks) and
+  // also reach back into react/emotion internals, so grouping them into a fixed
+  // `vendor-state` chunk creates an init cycle that surfaces as a TDZ error
+  // ("Cannot access 'Ir' before initialization") in the minified bundle. The
+  // combined gzip size is ~30KB; let Rollup's default splitter fold them into
+  // whatever chunk makes sense so the init order stays correct.
 }
 
 export const sharedRollupOutput = {

@@ -26,6 +26,9 @@ export const ServerConfigStoreProvider = memo<GlobalStoreProviderProps>(
           isMobile,
           segmentVariants,
           serverConfig,
+          // When the SSR payload is present, treat the store as already initialized so
+          // StoreInitialization's useInitServerConfig hook skips the duplicate trpc fetch.
+          serverConfigInit: Boolean(serverConfig),
         })
       }
     >

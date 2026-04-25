@@ -77,16 +77,18 @@ export const userRouter = router({
       await UserModel.makeSureUserExist(ctx.serverDB, ctx.userId);
     }
 
-    // Run user state fetch and count queries in parallel
-    const [state, messageCount, hasExtraSession, referralStatus, subscriptionPlan, userRecord] =
-      await Promise.all([
-        ctx.userModel.getUserState(KeyVaultsGateKeeper.getUserKeyVaults),
-        ctx.messageModel.countUpTo(5),
-        ctx.sessionModel.hasMoreThanN(1),
-        getReferralStatus(ctx.userId),
-        getSubscriptionPlan(ctx.userId),
-        UserModel.findById(ctx.serverDB, ctx.userId),
-      ]);
+    // Run user state fetch and count queries in parallel.
+    // `role` is now selected inside getUserState itself so we dropped the separate
+    // UserModel.findById round-trip. getReferralStatus / getSubscriptionPlan are
+    // community-edition stubs; keep them but don't pay for extra parallelism when
+    // they resolve synchronously.
+    const [state, messageCount, hasExtraSession] = await Promise.all([
+      ctx.userModel.getUserState(KeyVaultsGateKeeper.getUserKeyVaults),
+      ctx.messageModel.countUpTo(5),
+      ctx.sessionModel.hasMoreThanN(1),
+    ]);
+    const referralStatus = await getReferralStatus(ctx.userId);
+    const subscriptionPlan = await getSubscriptionPlan(ctx.userId);
 
     const hasMoreThan4Messages = messageCount > 4;
     const hasAnyMessages = messageCount > 0;
@@ -109,7 +111,7 @@ export const userRouter = router({
       lastName: state.lastName,
       onboarding: state.onboarding,
       preference: state.preference as UserPreference,
-      role: userRecord?.role ?? undefined,
+      role: state.role ?? undefined,
       settings: state.settings,
       userId: ctx.userId,
       username: state.username,

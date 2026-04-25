@@ -1,7 +1,7 @@
 import { Button, Modal } from '@lobehub/ui';
 import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
-import { memo, useContext, useState } from 'react';
+import { memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -28,12 +28,12 @@ const ModelConfigModal = memo<ModelConfigModalProps>(({ id, open, setOpen }) => 
   const closeModal = () => {
     setOpen(false);
   };
-  const { showDeployName } = useContext(ProviderSettingsContext);
+  const { showDeployName } = use(ProviderSettingsContext);
 
   return (
     <Modal
       destroyOnHidden
-      maskClosable
+      mask={{ closable: true }}
       open={open}
       title={t('llm.customModelCards.modelConfig.modalTitle', { ns: 'setting' })}
       zIndex={1251} // Select is 1150

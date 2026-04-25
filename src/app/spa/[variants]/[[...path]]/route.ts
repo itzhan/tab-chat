@@ -103,6 +103,20 @@ async function getTemplate(isMobile: boolean): Promise<string> {
   return isMobile ? mobileHtmlTemplate : desktopHtmlTemplate;
 }
 
+// Production templates never change within a process lifetime; memoize per variant
+// so each warm request just hands back a string instead of re-parsing the module.
+const templateCache = new Map<string, Promise<string>>();
+function getCachedTemplate(isMobile: boolean): Promise<string> {
+  if (isDev) return getTemplate(isMobile);
+  const key = isMobile ? 'mobile' : 'desktop';
+  let cached = templateCache.get(key);
+  if (!cached) {
+    cached = getTemplate(isMobile);
+    templateCache.set(key, cached);
+  }
+  return cached;
+}
+
 function buildAnalyticsConfig(): AnalyticsConfig {
   const config: AnalyticsConfig = {};
 
@@ -192,6 +206,61 @@ async function buildSeoMeta(locale: string): Promise<string> {
   ].join('\n    ');
 }
 
+// Per-variant caches. Everything feeding these is env-only, so they're safe to
+// hold for the lifetime of the process.
+const seoCache = new Map<string, Promise<string>>();
+function getCachedSeoMeta(locale: string): Promise<string> {
+  let cached = seoCache.get(locale);
+  if (!cached) {
+    cached = buildSeoMeta(locale);
+    seoCache.set(locale, cached);
+  }
+  return cached;
+}
+
+const htmlCache = new Map<string, Promise<string>>();
+function getCachedHtml(variants: string, locale: string, isMobile: boolean): Promise<string> {
+  // In dev we never cache the assembled HTML — the Vite template and server
+  // config both change freely, and stale HTML breaks HMR.
+  if (isDev) return buildHtml(locale, isMobile);
+
+  let cached = htmlCache.get(variants);
+  if (!cached) {
+    cached = buildHtml(locale, isMobile).catch((err) => {
+      htmlCache.delete(variants);
+      throw err;
+    });
+    htmlCache.set(variants, cached);
+  }
+  return cached;
+}
+
+async function buildHtml(locale: string, isMobile: boolean): Promise<string> {
+  const [serverConfig, template, seoMeta] = await Promise.all([
+    getServerGlobalConfig(),
+    getCachedTemplate(isMobile),
+    getCachedSeoMeta(locale),
+  ]);
+
+  const spaConfig: SPAServerConfig = {
+    analyticsConfig: buildAnalyticsConfig(),
+    clientEnv: buildClientEnv(),
+    config: serverConfig,
+    featureFlags: getServerFeatureFlagsValue(),
+    isMobile,
+  };
+
+  let html = template.replace(
+    /window\.__SERVER_CONFIG__\s*=\s*undefined;\s*\/\*\s*SERVER_CONFIG\s*\*\//,
+    `window.__SERVER_CONFIG__ = ${serializeForHtml(spaConfig)};`,
+  );
+
+  html = html.replace('<!--SEO_META-->', seoMeta);
+  html = html.replace('<!--ANALYTICS_SCRIPTS-->', '');
+
+  return html;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ path?: string[]; variants: string }> },
@@ -199,33 +268,18 @@ export async function GET(
   const { variants } = await params;
   const { locale, isMobile } = RouteVariants.deserializeVariants(variants);
 
-  const serverConfig = await getServerGlobalConfig();
-  const featureFlags = getServerFeatureFlagsValue();
-  const analyticsConfig = buildAnalyticsConfig();
-  const clientEnv = buildClientEnv();
-
-  const spaConfig: SPAServerConfig = {
-    analyticsConfig,
-    clientEnv,
-    config: serverConfig,
-    featureFlags,
-    isMobile,
-  };
-
-  let html = await getTemplate(isMobile);
-
-  html = html.replace(
-    /window\.__SERVER_CONFIG__\s*=\s*undefined;\s*\/\*\s*SERVER_CONFIG\s*\*\//,
-    `window.__SERVER_CONFIG__ = ${serializeForHtml(spaConfig)};`,
-  );
-
-  const seoMeta = await buildSeoMeta(locale);
-  html = html.replace('<!--SEO_META-->', seoMeta);
-  html = html.replace('<!--ANALYTICS_SCRIPTS-->', '');
+  const html = await getCachedHtml(variants, locale, isMobile);
 
   return new Response(html, {
     headers: {
-      'Cache-Control': 'no-cache',
+      // The HTML body is env-only (no per-user data — user state is fetched
+      // client-side via trpc after hydration), so let the CDN serve it to all
+      // visitors. 5-minute fresh window with a 1-day stale-while-revalidate
+      // means env changes roll out within 5 min, but cold users still get
+      // instant responses.
+      'Cache-Control': isDev
+        ? 'no-cache'
+        : 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400',
       'content-type': 'text/html; charset=utf-8',
     },
   });

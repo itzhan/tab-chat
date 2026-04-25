@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { createContext, memo, useCallback, useMemo, useState } from 'react';
+import { createContext, memo, use, useCallback, useMemo, useState } from 'react';
 
 export type FaviconState = 'default' | 'done' | 'error' | 'progress';
 

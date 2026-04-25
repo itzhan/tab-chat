@@ -153,6 +153,10 @@ describe('ServerConfigAction', () => {
       const { useOnlyFetchOnceSWR } = vi.mocked(await import('@/libs/swr'));
 
       const store = createServerConfigStore();
+      // Earlier tests in this file exercise onSuccess which flips
+      // serverConfigInit to true on the shared singleton; reset it so this test
+      // observes the fetch path.
+      store.setState({ serverConfigInit: false });
       store.getState().useInitServerConfig();
 
       expect(useOnlyFetchOnceSWR).toHaveBeenCalledWith(
@@ -169,6 +173,7 @@ describe('ServerConfigAction', () => {
       const { useOnlyFetchOnceSWR } = vi.mocked(await import('@/libs/swr'));
 
       const store = createServerConfigStore();
+      store.setState({ serverConfigInit: false });
       store.getState().useInitServerConfig();
 
       expect(useOnlyFetchOnceSWR).toHaveBeenCalledWith(
@@ -179,6 +184,20 @@ describe('ServerConfigAction', () => {
 
       const fetcherArg = (useOnlyFetchOnceSWR as any).mock.calls[0][1];
       expect(typeof fetcherArg).toBe('function');
+    });
+
+    it('should skip the trpc fetch when SSR already hydrated the store', async () => {
+      const { useOnlyFetchOnceSWR } = vi.mocked(await import('@/libs/swr'));
+
+      const store = createServerConfigStore();
+      store.setState({ serverConfigInit: true });
+      store.getState().useInitServerConfig();
+
+      expect(useOnlyFetchOnceSWR).toHaveBeenCalledWith(
+        null,
+        expect.any(Function),
+        expect.any(Object),
+      );
     });
   });
 });

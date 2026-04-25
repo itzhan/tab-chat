@@ -578,8 +578,11 @@ export const desktopRoutes: RouteObject[] = [
         path: 'page',
       },
 
-      // Default route - home page (handled by persistent layout)
+      // Default route - home page (handled by persistent layout above the Outlet,
+      // so the index route itself renders nothing). Explicit empty fragment
+      // suppresses React Router's "leaf route has no element" warning.
       {
+        element: <></>,
         index: true,
       },
       // Catch-all route

@@ -278,6 +278,17 @@ const SWR_CACHEABLE_PATTERNS = [
   'SWR_USE_FETCH_TOPIC', // Topic list (cached per agentId/groupId)
   'fetchGroupDetail', // Group detail (cached per groupId)
   'CONVERSATION_FETCH_MESSAGES', // Messages (cached per agentId/topicId)
+  // Boot-critical: enabled providers + normalized chat/image/video model lists.
+  // Recomputing this on every refresh costs 2-4s (15MB model-bank dynamic import
+  // + per-model normalization), and the SWR key is already namespaced by
+  // `isLogin` so the cache cannot leak between auth states. Stale-while-revalidate
+  // means the chat UI renders instantly with last-known-good data while SWR
+  // refreshes in the background.
+  'FETCH_AI_PROVIDER_RUNTIME_STATE',
+  // NOTE: `initUserState` is intentionally NOT cached — the response carries
+  // settings/keyvaults and is keyed only on the literal string, so it would
+  // briefly leak across logout→login. The trpc query is fast (<500ms) and the
+  // privacy/correctness cost outweighs the latency win.
 ];
 
 /**

@@ -19,20 +19,55 @@ export const genServerAiProvidersConfig = async (
 ) => {
   const llmConfig = getLLMConfig() as Record<string, any>;
 
-  // Process all providers concurrently
+  // Process all providers concurrently. For providers that are disabled AND have no
+  // explicit model list env var set, we return a cheap `{ enabled: false }` stub
+  // without touching the `extractEnabledModels` / `transformToAiModelList` helpers
+  // (which each call `parseModelString` and eventually pull the 15MB `model-bank`
+  // module on cold start). In a typical web deployment only 1-2 providers are
+  // actually enabled, so this is the biggest single win against cold-start latency.
   const providerConfigs = await Promise.all(
     Object.values(ModelProvider).map(async (provider) => {
       const providerUpperCase = provider.toUpperCase();
-      const aiModels = AiModels[provider] as AiFullModelCard[];
-
-      if (!aiModels)
-        throw new Error(
-          `Provider [${provider}] not found in aiModels, please make sure you have exported the provider in the \`aiModels/index.ts\``,
-        );
+      const aiModels = AiModels[provider] as AiFullModelCard[] | undefined;
 
       const providerConfig = specificConfig[provider as keyof typeof specificConfig] || {};
+
+      // The ModelProvider enum still lists all 79 builtin providers but the
+      // curated `aiModels/index.ts` only exports a subset. For providers we
+      // didn't ship a catalog for, return a disabled stub instead of throwing
+      // — they're still selectable as user-custom providers if needed, just
+      // without a default model list.
+      if (!aiModels) {
+        return {
+          config: {
+            enabled: false,
+            ...(providerConfig.fetchOnClient !== undefined && {
+              fetchOnClient: providerConfig.fetchOnClient,
+            }),
+          },
+          provider,
+        };
+      }
       const modelString =
         process.env[providerConfig.modelListKey ?? `${providerUpperCase}_MODEL_LIST`];
+
+      const enabled =
+        typeof providerConfig.enabled !== 'undefined'
+          ? providerConfig.enabled
+          : llmConfig[providerConfig.enabledKey || `ENABLED_${providerUpperCase}`];
+
+      // Fast path: nothing to compute.
+      if (!enabled && !modelString) {
+        return {
+          config: {
+            enabled,
+            ...(providerConfig.fetchOnClient !== undefined && {
+              fetchOnClient: providerConfig.fetchOnClient,
+            }),
+          },
+          provider,
+        };
+      }
 
       // Process extractEnabledModels and transformToAiModelList concurrently
       const [enabledModels, serverModelLists] = await Promise.all([
@@ -47,10 +82,7 @@ export const genServerAiProvidersConfig = async (
 
       return {
         config: {
-          enabled:
-            typeof providerConfig.enabled !== 'undefined'
-              ? providerConfig.enabled
-              : llmConfig[providerConfig.enabledKey || `ENABLED_${providerUpperCase}`],
+          enabled,
           enabledModels,
           serverModelLists,
           ...(providerConfig.fetchOnClient !== undefined && {

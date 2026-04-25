@@ -26,7 +26,17 @@ const getBetterAuthSSOProviders = () => {
   return parseSSOProviders(authEnv.AUTH_SSO_PROVIDERS);
 };
 
-export const getServerGlobalConfig = async () => {
+// Memoize the global server config across the lifetime of the *process*, not the
+// lifetime of this *module*. Next.js dev mode reloads modules on HMR and `let`
+// bindings reset to undefined, which would defeat the cache and force the cold
+// 20s rebuild on every request. Stashing the Promise on `globalThis` survives
+// HMR re-evaluations and keeps each Node worker's first cold call paid only
+// once. (In production this is equivalent to a module-level `let`.)
+declare global {
+  var __LOBE_SERVER_GLOBAL_CONFIG__: Promise<GlobalServerConfig> | undefined;
+}
+
+const buildServerGlobalConfig = async (): Promise<GlobalServerConfig> => {
   const { DEFAULT_AGENT_CONFIG } = getAppConfig();
 
   const config: GlobalServerConfig = {
@@ -104,6 +114,17 @@ export const getServerGlobalConfig = async () => {
   };
 
   return config;
+};
+
+export const getServerGlobalConfig = (): Promise<GlobalServerConfig> => {
+  if (!globalThis.__LOBE_SERVER_GLOBAL_CONFIG__) {
+    globalThis.__LOBE_SERVER_GLOBAL_CONFIG__ = buildServerGlobalConfig().catch((err) => {
+      // Don't cache failures — next call should retry.
+      globalThis.__LOBE_SERVER_GLOBAL_CONFIG__ = undefined;
+      throw err;
+    });
+  }
+  return globalThis.__LOBE_SERVER_GLOBAL_CONFIG__;
 };
 
 export const getServerDefaultAgentConfig = () => {

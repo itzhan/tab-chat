@@ -4,6 +4,7 @@ import type { PluginOption, ViteDevServer } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+import { viteDevInjectServerConfig } from './plugins/vite/devInjectServerConfig';
 import { viteEnvRestartKeys } from './plugins/vite/envRestartKeys';
 import {
   sharedOptimizeDeps,
@@ -36,6 +37,7 @@ export default defineConfig({
   plugins: [
     vercelSkewProtection(),
     viteEnvRestartKeys(['APP_URL']),
+    viteDevInjectServerConfig(),
     ...sharedRendererPlugins({ platform }),
 
     isDev && {

@@ -2,222 +2,30 @@ import { ENABLE_BUSINESS_FEATURES } from '@lobechat/business-const';
 
 import type { ChatModelCard, ModelProviderCard } from '@/types/llm';
 
-import Ai21Provider from './ai21';
-import Ai302Provider from './ai302';
-import Ai360Provider from './ai360';
-import AiHubMixProvider from './aihubmix';
-import AkashChatProvider from './akashchat';
 import AnthropicProvider from './anthropic';
-import AzureProvider from './azure';
-import AzureAIProvider from './azureai';
-import BaichuanProvider from './baichuan';
-import BailianCodingPlanProvider from './bailianCodingPlan';
-import BedrockProvider from './bedrock';
-import BflProvider from './bfl';
-import CerebrasProvider from './cerebras';
-import CloudflareProvider from './cloudflare';
-import CohereProvider from './cohere';
-import CometAPIProvider from './cometapi';
-import ComfyUIProvider from './comfyui';
-import DeepSeekProvider from './deepseek';
-import FalProvider from './fal';
-import FireworksAIProvider from './fireworksai';
-import GiteeAIProvider from './giteeai';
-import GithubProvider from './github';
-import GithubCopilotProvider from './githubCopilot';
-import GLMCodingPlanProvider from './glmCodingPlan';
-import GoogleProvider from './google';
-import GroqProvider from './groq';
-import HigressProvider from './higress';
-import HuggingFaceProvider from './huggingface';
-import HunyuanProvider from './hunyuan';
-import InfiniAIProvider from './infiniai';
-import InternLMProvider from './internlm';
-import JinaProvider from './jina';
-import KimiCodingPlanProvider from './kimiCodingPlan';
-import LMStudioProvider from './lmstudio';
 import LobeHubProvider from './lobehub';
-import LongCatProvider from './longcat';
-import MinimaxProvider from './minimax';
-import MinimaxCodingPlanProvider from './minimaxCodingPlan';
-import MistralProvider from './mistral';
-import ModelScopeProvider from './modelscope';
-import MoonshotProvider from './moonshot';
-import NebiusProvider from './nebius';
-import NewAPIProvider from './newapi';
-import NovitaProvider from './novita';
-import NvidiaProvider from './nvidia';
-import OllamaProvider from './ollama';
-import OllamaCloudProvider from './ollamacloud';
 import OpenAIProvider from './openai';
-import OpenRouterProvider from './openrouter';
-import PerplexityProvider from './perplexity';
-import PPIOProvider from './ppio';
-import QiniuProvider from './qiniu';
-import QwenProvider from './qwen';
-import ReplicateProvider from './replicate';
-import SambaNovaProvider from './sambanova';
-import Search1APIProvider from './search1api';
-import SenseNovaProvider from './sensenova';
-import SiliconCloudProvider from './siliconcloud';
-import SparkProvider from './spark';
-import StepfunProvider from './stepfun';
-import StraicoProvider from './straico';
-import StreamLakeProvider from './streamlake';
-import TaichuProvider from './taichu';
-import TencentcloudProvider from './tencentcloud';
-import TogetherAIProvider from './togetherai';
-import UpstageProvider from './upstage';
-import V0Provider from './v0';
-import VercelAIGatewayProvider from './vercelaigateway';
-import VertexAIProvider from './vertexai';
-import VLLMProvider from './vllm';
-import VolcengineProvider from './volcengine';
-import VolcengineCodingPlanProvider from './volcengineCodingPlan';
-import WenxinProvider from './wenxin';
 import XAIProvider from './xai';
-import XiaomiMiMoProvider from './xiaomimimo';
-import XinferenceProvider from './xinference';
-import ZenMuxProvider from './zenmux';
-import ZeroOneProvider from './zeroone';
-import ZhiPuProvider from './zhipu';
+
+// Mirrors the curation in `aiModels/index.ts`. DEFAULT_MODEL_PROVIDER_LIST
+// drives the user-visible "AI 服务商" menu and is the sole source of static
+// provider imports — Rollup tree-shakes the rest out of the client bundle
+// (named re-exports stay for server-side compatibility).
 
 /**
  * @deprecated
  */
 export const LOBE_DEFAULT_MODEL_LIST: ChatModelCard[] = [
   OpenAIProvider.chatModels,
-  QwenProvider.chatModels,
-  ZhiPuProvider.chatModels,
-  BedrockProvider.chatModels,
-  DeepSeekProvider.chatModels,
-  GoogleProvider.chatModels,
-  GroqProvider.chatModels,
-  GithubProvider.chatModels,
-  MinimaxProvider.chatModels,
-  MistralProvider.chatModels,
-  ModelScopeProvider.chatModels,
-  MoonshotProvider.chatModels,
-  OllamaProvider.chatModels,
-  VLLMProvider.chatModels,
-  XinferenceProvider.chatModels,
-  OpenRouterProvider.chatModels,
-  TogetherAIProvider.chatModels,
-  FireworksAIProvider.chatModels,
-  PerplexityProvider.chatModels,
   AnthropicProvider.chatModels,
-  HuggingFaceProvider.chatModels,
   XAIProvider.chatModels,
-  JinaProvider.chatModels,
-  SambaNovaProvider.chatModels,
-  CohereProvider.chatModels,
-  V0Provider.chatModels,
-  ZeroOneProvider.chatModels,
-  StepfunProvider.chatModels,
-  NovitaProvider.chatModels,
-  NvidiaProvider.chatModels,
-  BaichuanProvider.chatModels,
-  TaichuProvider.chatModels,
-  CloudflareProvider.chatModels,
-  Ai360Provider.chatModels,
-  AiHubMixProvider.chatModels,
-  SiliconCloudProvider.chatModels,
-  GiteeAIProvider.chatModels,
-  UpstageProvider.chatModels,
-  SparkProvider.chatModels,
-  Ai21Provider.chatModels,
-  HunyuanProvider.chatModels,
-  WenxinProvider.chatModels,
-  SenseNovaProvider.chatModels,
-  InternLMProvider.chatModels,
-  HigressProvider.chatModels,
-  PPIOProvider.chatModels,
-  Search1APIProvider.chatModels,
-  InfiniAIProvider.chatModels,
-  QiniuProvider.chatModels,
-  VercelAIGatewayProvider.chatModels,
 ].flat();
 
 export const DEFAULT_MODEL_PROVIDER_LIST = [
   ...(ENABLE_BUSINESS_FEATURES ? [LobeHubProvider] : []),
-  AnthropicProvider,
-  GoogleProvider,
-  GLMCodingPlanProvider,
-  KimiCodingPlanProvider,
   OpenAIProvider,
-  DeepSeekProvider,
-  XinferenceProvider,
-  MoonshotProvider,
-  BedrockProvider,
-  BailianCodingPlanProvider,
-  VertexAIProvider,
-  { ...AzureProvider, chatModels: [] },
-  AzureAIProvider,
-  AiHubMixProvider,
-  OpenRouterProvider,
-  FalProvider,
-  OllamaProvider,
-  OllamaCloudProvider,
-  VLLMProvider,
-  ComfyUIProvider,
-  HuggingFaceProvider,
-  CloudflareProvider,
-  GithubProvider,
-  GithubCopilotProvider,
-  NewAPIProvider,
-  BflProvider,
-  NovitaProvider,
-  PPIOProvider,
-  Ai302Provider,
-  NvidiaProvider,
-  TogetherAIProvider,
-  FireworksAIProvider,
-  GroqProvider,
-  PerplexityProvider,
-  MistralProvider,
-  ModelScopeProvider,
-  Ai21Provider,
-  UpstageProvider,
+  AnthropicProvider,
   XAIProvider,
-  JinaProvider,
-  SambaNovaProvider,
-  CohereProvider,
-  V0Provider,
-  QwenProvider,
-  WenxinProvider,
-  TencentcloudProvider,
-  HunyuanProvider,
-  ZhiPuProvider,
-  SiliconCloudProvider,
-  ZeroOneProvider,
-  SparkProvider,
-  SenseNovaProvider,
-  StepfunProvider,
-  BaichuanProvider,
-  VolcengineProvider,
-  VolcengineCodingPlanProvider,
-  MinimaxProvider,
-  MinimaxCodingPlanProvider,
-  LMStudioProvider,
-  InternLMProvider,
-  HigressProvider,
-  GiteeAIProvider,
-  TaichuProvider,
-  Ai360Provider,
-  Search1APIProvider,
-  InfiniAIProvider,
-  AkashChatProvider,
-  QiniuProvider,
-  ReplicateProvider,
-  NebiusProvider,
-  CometAPIProvider,
-  VercelAIGatewayProvider,
-  CerebrasProvider,
-  ZenMuxProvider,
-  StraicoProvider,
-  XiaomiMiMoProvider,
-  LongCatProvider,
-  StreamLakeProvider,
 ];
 
 export const filterEnabledModels = (provider: ModelProviderCard) => {
@@ -231,6 +39,8 @@ export const isProviderDisableBrowserRequest = (id: string) => {
   return !!provider;
 };
 
+// Re-exports kept for server-side / tooling compatibility (route detail pages,
+// discover service). Tree-shaken out of client bundles when unreferenced.
 export { default as Ai21ProviderCard } from './ai21';
 export { default as Ai302ProviderCard } from './ai302';
 export { default as Ai360ProviderCard } from './ai360';
