@@ -1,4 +1,5 @@
 import type { ChatCitationItem, ChatMessageError } from '@lobechat/types';
+import createDebug from 'debug';
 import type OpenAI from 'openai';
 import type { Stream } from 'openai/streaming';
 
@@ -20,6 +21,8 @@ import {
   FIRST_CHUNK_ERROR_KEY,
 } from '../protocol';
 import type { OpenAIStreamOptions } from './openai';
+
+const reasoningDebug = createDebug('lobe-responses:reasoning');
 
 const transformOpenAIStream = (
   chunk:
@@ -60,6 +63,16 @@ const transformOpenAIStream = (
           : AgentRuntimeErrorType.ProviderBizError,
     } satisfies ChatMessageError;
     return { data: errorData, id: 'first_chunk_error', type: 'error' };
+  }
+
+  // Trace every event the upstream emits so we can see which proxy gateways
+  // pass through reasoning chunks and which strip them.
+  if (reasoningDebug.enabled) {
+    reasoningDebug(
+      'upstream chunk type=%s%s',
+      (chunk as any).type,
+      (chunk as any).delta ? ` delta_len=${String((chunk as any).delta).length}` : '',
+    );
   }
 
   try {

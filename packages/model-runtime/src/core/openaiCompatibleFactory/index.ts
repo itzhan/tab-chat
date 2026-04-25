@@ -1134,7 +1134,14 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
         console.log(JSON.stringify(postPayload), '\n');
       }
 
-      log('sending responses.create request');
+      // Always log the reasoning block so we can confirm summary='auto' is
+      // actually being sent upstream (DEBUG=lobe-responses:reasoning).
+      log(
+        'sending responses.create request: model=%s reasoning=%j stream=%s',
+        (postPayload as any).model,
+        (postPayload as any).reasoning,
+        (postPayload as any).stream,
+      );
 
       const response = await this.client.responses.create(postPayload, {
         headers: options?.requestHeaders,
