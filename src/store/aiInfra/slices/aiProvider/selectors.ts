@@ -132,6 +132,16 @@ const isProviderEnableResponseApi = (id: string) => (s: AIProviderStoreState) =>
 
 const isInitAiProviderRuntimeState = (s: AIProviderStoreState) => !!s.isInitAiProviderRuntimeState;
 
+/**
+ * True when the active provider opts out of structured image-gen params
+ * (`n` / count). The chat UI hides the count selector and the lambda router
+ * skips the per-imageNum fan-out — see AiProviderSettings.paramlessImageMode.
+ */
+const isProviderParamlessImageMode = (id: string | undefined) => (s: AIProviderStoreState) => {
+  if (!id) return false;
+  return !!providerConfigById(id)(s)?.settings?.paramlessImageMode;
+};
+
 export const aiProviderSelectors = {
   activeProviderConfig,
   disabledAiProviderList,
@@ -150,6 +160,7 @@ export const aiProviderSelectors = {
   isProviderHasBuiltinSearch,
   isProviderHasBuiltinSearchConfig,
   isProviderLoading,
+  isProviderParamlessImageMode,
   providerConfigById,
   providerDetailById,
   providerKeyVaults,

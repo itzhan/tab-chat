@@ -1,7 +1,12 @@
 import { ASYNC_TASK_TIMEOUT } from '@lobechat/business-config/server';
 import { ENABLE_BUSINESS_FEATURES } from '@lobechat/business-const';
 import { AgentRuntimeErrorType } from '@lobechat/model-runtime';
-import { AsyncTaskError, AsyncTaskErrorType, AsyncTaskStatus } from '@lobechat/types';
+import {
+  AsyncTaskError,
+  AsyncTaskErrorType,
+  AsyncTaskStatus,
+  AsyncTaskType,
+} from '@lobechat/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { type RuntimeImageGenParams } from 'model-bank';
@@ -43,6 +48,14 @@ const createImageInputSchema = z.object({
   generationId: z.string(),
   generationTopicId: z.string(),
   model: z.string(),
+  /**
+   * When true (provider has AiProviderSettings.paramlessImageMode), the
+   * upstream gateway returns multiple images in a single response. The
+   * adapter strips `n` from the request and surfaces every data[] entry;
+   * this router fans them out into additional generation rows so each
+   * image gets its own asset / preview.
+   */
+  paramlessImageMode: z.boolean().optional(),
   params: z
     .object({
       cfg: z.number().optional(),
@@ -220,6 +233,7 @@ export const imageRouter = router({
         provider,
         model,
         params,
+        paramlessImageMode,
       } = input;
 
       log('Starting async image generation: %O', {
@@ -266,6 +280,7 @@ export const imageRouter = router({
           log('Agent runtime initialized, calling createImage');
           const response = await modelRuntime.createImage!({
             model,
+            paramlessImageMode,
             params: params as unknown as RuntimeImageGenParams,
           });
 
@@ -351,6 +366,68 @@ export const imageRouter = router({
               url: uploadedImageUrl,
             },
           );
+
+          // Paramless mode: a single upstream call may return >1 image. The
+          // first one already populated the existing generation row above;
+          // fan the rest out into sibling rows under the same batch so the
+          // UI shows them as independent generations.
+          const extraImageUrls = response.extraImageUrls ?? [];
+          if (extraImageUrls.length > 0) {
+            log('Fanning out %d extra image(s) into sibling rows', extraImageUrls.length);
+            for (const extraUrl of extraImageUrls) {
+              checkAbortSignal(signal);
+              try {
+                const siblingGen = await ctx.generationModel.create({
+                  asyncTaskId: null,
+                  generationBatchId,
+                  seed: null,
+                });
+                const siblingTask = await ctx.asyncTaskModel.create({
+                  status: AsyncTaskStatus.Success,
+                  type: AsyncTaskType.ImageGeneration,
+                });
+                await ctx.generationModel.update(siblingGen.id, { asyncTaskId: siblingTask });
+
+                const transformed = await ctx.generationService.transformImageForGeneration(
+                  extraUrl,
+                  authHeaders,
+                );
+                checkAbortSignal(signal);
+                const uploaded = await ctx.generationService.uploadImageForGeneration(
+                  transformed.image,
+                  transformed.thumbnailImage,
+                );
+                checkAbortSignal(signal);
+                await ctx.generationModel.createAssetAndFile(
+                  siblingGen.id,
+                  {
+                    height: transformed.image.height,
+                    originalUrl: extraUrl.startsWith('data:') ? uploaded.imageUrl : extraUrl,
+                    thumbnailUrl: uploaded.thumbnailImageUrl,
+                    type: 'image',
+                    url: uploaded.imageUrl,
+                    width: transformed.image.width,
+                  },
+                  {
+                    fileHash: transformed.image.hash,
+                    fileType: transformed.image.mime,
+                    metadata: {
+                      generationId: siblingGen.id,
+                      height: transformed.image.height,
+                      path: uploaded.imageUrl,
+                      width: transformed.image.width,
+                    },
+                    name: `${sanitizeFileName(params.prompt, siblingGen.id)}.${transformed.image.extension}`,
+                    size: transformed.image.size,
+                    url: uploaded.imageUrl,
+                  },
+                );
+              } catch (err) {
+                // Don't let one bad extra image fail the whole batch — log and continue.
+                console.error('[image-async] Failed to fan out extra image:', err);
+              }
+            }
+          }
 
           const duration = Date.now() - generationBatch.createdAt.getTime();
 

@@ -3,6 +3,15 @@ import type { RuntimeImageGenParams } from 'model-bank';
 
 export type CreateImagePayload = {
   model: string;
+  /**
+   * When true, the OpenAI-compatible adapter:
+   *   1. omits `n` from the upstream request (some gateways like sub2api
+   *      reject or silently drop it)
+   *   2. surfaces every entry of the response `data[]` instead of taking
+   *      only data[0]
+   * Driven by AiProviderSettings.paramlessImageMode at the lambda layer.
+   */
+  paramlessImageMode?: boolean;
   params: RuntimeImageGenParams;
 };
 
@@ -13,14 +22,14 @@ export type CreateImagePayload = {
  */
 export type CreateImageResponse = {
   /**
-   * Usually the provider's CDN URL, which often expires after some time and needs to be re-requested
+   * Additional images beyond `imageUrl`, populated when the upstream
+   * returned a `data[]` array with more than one entry AND the caller asked
+   * for paramless mode. The lambda layer fans these out into extra
+   * generation rows so each image gets its own asset / preview.
+   * Stays empty/undefined for normal single-image flows so existing
+   * callers (Banana etc.) are unaffected.
    */
-  imageUrl: string;
-
-  /**
-   * Image width
-   */
-  width?: number;
+  extraImageUrls?: string[];
 
   /**
    * Image height
@@ -28,9 +37,19 @@ export type CreateImageResponse = {
   height?: number;
 
   /**
+   * Usually the provider's CDN URL, which often expires after some time and needs to be re-requested
+   */
+  imageUrl: string;
+
+  /**
    * For models like GPT-image, Nano Banana which are LLMs with image output modality
    */
   modelUsage?: ModelUsage;
+
+  /**
+   * Image width
+   */
+  width?: number;
 };
 
 // New: Runtime interface for authenticated image download support

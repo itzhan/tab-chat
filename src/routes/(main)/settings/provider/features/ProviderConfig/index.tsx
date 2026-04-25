@@ -397,6 +397,20 @@ const ProviderConfig = memo<ProviderConfigProps>(
           }
         : undefined;
 
+    // Admin-only: toggle for upstream image-gen APIs that don't accept `n`
+    // (e.g. sub2api gpt-image-2). When on, the chat UI hides the image-count
+    // selector, the lambda stops fanning out one upstream call per image, and
+    // the response's full data[] array is surfaced as multiple generations.
+    const paramlessImageModeItem: FormItemProps | undefined = isAdmin
+      ? {
+          children: isLoading ? <Skeleton.Button active /> : <Switch loading={configUpdating} />,
+          desc: '开启后，该服务商在生图时不再传 n / 数量参数，直接按上游返回的 data 数组长度展示多张图。适用于 sub2api/gpt-image-2 这类只看 prompt、不看 n 的接口；普通模型（Banana 等）请保持关闭。',
+          label: '生图忽略数量参数（按 prompt 多图）',
+          minWidth: undefined,
+          name: ['settings', 'paramlessImageMode'],
+        }
+      : undefined;
+
     // For non-admin BYO users: baseURL and other admin-owned fields stay
     // VISIBLE (so the user understands what's configured) but disabled, and
     // all actionable controls — connection check button, client-fetch
@@ -418,6 +432,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
           }
         : undefined,
       allowUserApiKeyItem,
+      paramlessImageModeItem,
       isAdmin ? clientFetchItem : undefined,
       isAdmin && showChecker
         ? {

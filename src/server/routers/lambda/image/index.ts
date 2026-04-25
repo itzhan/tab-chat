@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { chargeBeforeGenerate } from '@/business/server/image-generation/chargeBeforeGenerate';
+import { AiProviderModel } from '@/database/models/aiProvider';
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { type NewGeneration, type NewGenerationBatch } from '@/database/schemas';
 import { asyncTasks, generationBatches, generations } from '@/database/schemas';
@@ -58,6 +59,23 @@ export const imageRouter = router({
     const { generationTopicId, provider, model, imageNum, params } = input;
 
     log('Starting image creation process, input: %O', input);
+
+    // Provider-level paramless mode: gateways like sub2api gpt-image-2 don't
+    // accept `n` and instead return whatever count the model decided based on
+    // the prompt. Force imageNum=1 so we only create one generation row /
+    // async task / upstream call; any extra images returned will be fanned
+    // out into additional rows by the async router.
+    const aiProviderModel = new AiProviderModel(serverDB, userId);
+    const providerRow = await aiProviderModel.findById(provider).catch(() => null);
+    const paramlessImageMode = !!providerRow?.settings?.paramlessImageMode;
+    const effectiveImageNum = paramlessImageMode ? 1 : imageNum;
+    if (paramlessImageMode && imageNum !== 1) {
+      log(
+        'Provider %s is paramlessImageMode — collapsing imageNum %d → 1 (response will fan out)',
+        provider,
+        imageNum,
+      );
+    }
 
     // Normalize reference image addresses, store S3 keys uniformly (avoid storing expiring presigned URLs in database)
     let configForDatabase = { ...params };
@@ -140,7 +158,7 @@ export const imageRouter = router({
       configForDatabase,
       generationParams,
       generationTopicId,
-      imageNum,
+      imageNum: effectiveImageNum,
       model,
       provider,
       userId,
@@ -171,15 +189,18 @@ export const imageRouter = router({
       // 2. Create generations
       const seeds =
         'seed' in params
-          ? generateUniqueSeeds(imageNum)
-          : Array.from({ length: imageNum }, () => null);
-      const newGenerations: NewGeneration[] = Array.from({ length: imageNum }, (_, index) => {
-        return {
-          generationBatchId: batch.id,
-          seed: seeds[index],
-          userId,
-        };
-      });
+          ? generateUniqueSeeds(effectiveImageNum)
+          : Array.from({ length: effectiveImageNum }, () => null);
+      const newGenerations: NewGeneration[] = Array.from(
+        { length: effectiveImageNum },
+        (_, index) => {
+          return {
+            generationBatchId: batch.id,
+            seed: seeds[index],
+            userId,
+          };
+        },
+      );
 
       log('Creating %d generations for batch: %s', newGenerations.length, batch.id);
       const createdGenerations = await tx.insert(generations).values(newGenerations).returning();
@@ -249,6 +270,7 @@ export const imageRouter = router({
           generationId: generation.id,
           generationTopicId,
           model,
+          paramlessImageMode,
           params: generationParams,
           provider,
           taskId: asyncTaskId,

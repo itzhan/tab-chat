@@ -128,6 +128,13 @@ const PromptInput = ({ showTitle = false }: PromptInputProps) => {
   const isSupportWebSearch = useImageStore(isSupportedParamSelector('webSearch'));
   const isLogin = useUserStore(authSelectors.isLogin);
   const enabledImageModelList = useAiInfraStore(aiProviderSelectors.enabledImageModelList);
+  // Providers like sub2api/gpt-image-2 don't accept `n`; multi-image is
+  // expressed inside the prompt and read back from the response data[].
+  // Hide the count selector for those providers — the request flow drops
+  // imageNum server-side too (see lambda/image and createImage adapter).
+  const hideImageNum = useAiInfraStore(
+    aiProviderSelectors.isProviderParamlessImageMode(currentProvider ?? undefined),
+  );
   const { showDimensionControl } = useDimensionControl();
   const { autoSetDimensions, extractUrlAndDimensions } = useAutoDimensions();
 
@@ -334,16 +341,18 @@ const PromptInput = ({ showTitle = false }: PromptInputProps) => {
                 </Flexbox>
               }
             />
-            <Action
-              icon={Images}
-              title={t('config.imageNum.label')}
-              trigger={'click'}
-              popover={{
-                content: <ImageNum />,
-                minWidth: 220,
-                title: t('config.imageNum.label'),
-              }}
-            />
+            {!hideImageNum && (
+              <Action
+                icon={Images}
+                title={t('config.imageNum.label')}
+                trigger={'click'}
+                popover={{
+                  content: <ImageNum />,
+                  minWidth: 220,
+                  title: t('config.imageNum.label'),
+                }}
+              />
+            )}
           </Flexbox>
         }
         placeholder={

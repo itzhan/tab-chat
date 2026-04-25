@@ -158,6 +158,25 @@ export interface AiProviderSettings {
    */
   oauthDeviceFlow?: OAuthDeviceFlowConfig;
 
+  /**
+   * Some upstream image-gen APIs (e.g. sub2api's gpt-image-2) ignore the
+   * structured `n` parameter — they expect the user to express "give me 4
+   * images" inside the prompt and they return however many images the model
+   * decided to produce. When this is true:
+   *   1. The chat UI hides the image-count selector (size stays visible
+   *      because sub2api still respects size, including "auto").
+   *   2. The lambda image router skips the per-imageNum fan-out and makes a
+   *      single upstream call.
+   *   3. The OpenAI-compatible adapter omits `n` from the request and
+   *      surfaces every entry in the response `data[]` array as a separate
+   *      generated image (instead of taking only data[0]).
+   *
+   * Leave undefined/false for normal providers like Banana — they keep the
+   * batched n=1 fan-out behaviour.
+   * @default false
+   */
+  paramlessImageMode?: boolean;
+
   proxyUrl?:
     | {
         desc?: string;
@@ -207,6 +226,7 @@ const AiProviderSettingsSchema = z.object({
   disableBrowserRequest: z.boolean().optional(),
   modelEditable: z.boolean().optional(),
   oauthDeviceFlow: OAuthDeviceFlowConfigSchema.optional(),
+  paramlessImageMode: z.boolean().optional(),
   proxyUrl: z
     .object({
       desc: z.string().optional(),

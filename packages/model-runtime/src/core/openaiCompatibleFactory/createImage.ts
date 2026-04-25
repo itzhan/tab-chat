@@ -20,7 +20,7 @@ async function generateByImageMode(
   payload: CreateImagePayload,
   provider: string,
 ): Promise<CreateImageResponse> {
-  const { model, params } = payload;
+  const { model, params, paramlessImageMode } = payload;
 
   log('Creating image with model: %s and params: %O', model, params);
 
@@ -65,7 +65,9 @@ async function generateByImageMode(
   }
 
   const defaultInput = {
-    n: 1,
+    // Paramless gateways (sub2api gpt-image-2 etc.) reject or silently
+    // ignore `n`; the user expresses count inside the prompt instead.
+    ...(paramlessImageMode ? {} : { n: 1 }),
     ...(model.includes('dall-e') ? { response_format: 'b64_json' } : {}),
     // https://platform.openai.com/docs/api-reference/images/createEdit#images_createedit-input_fidelity
     ...(isImageEdit && model.includes('gpt-image-') && !model.includes('mini')
@@ -91,34 +93,39 @@ async function generateByImageMode(
     throw new Error('Invalid image response: missing or empty data array');
   }
 
-  const imageData = img.data[0];
-  if (!imageData) {
-    throw new Error('Invalid image response: first data item is null or undefined');
+  const decodeImageEntry = (entry: any): string | null => {
+    if (!entry) return null;
+    if (entry.b64_json) {
+      // OpenAI image generation always defaults to PNG.
+      return `data:image/png;base64,${entry.b64_json}`;
+    }
+    if (entry.url) return entry.url;
+    return null;
+  };
+
+  // In paramless mode the upstream may return >1 image; otherwise behave
+  // exactly as before (only data[0] is used).
+  const decodedUrls = paramlessImageMode
+    ? (img.data.map(decodeImageEntry).filter(Boolean) as string[])
+    : (() => {
+        const first = decodeImageEntry(img.data[0]);
+        return first ? [first] : [];
+      })();
+
+  if (decodedUrls.length === 0) {
+    throw new Error('Invalid image response: no decodable b64_json or url field');
   }
 
-  let imageUrl: string;
-
-  // Handle base64 format response
-  if (imageData.b64_json) {
-    // Determine the image's MIME type, default to PNG
-    const mimeType = 'image/png'; // OpenAI image generation defaults to PNG format
-
-    // Convert base64 string to complete data URL
-    imageUrl = `data:${mimeType};base64,${imageData.b64_json}`;
-    log('Successfully converted base64 to data URL, length: %d', imageUrl.length);
-  }
-  // Handle URL format response
-  else if (imageData.url) {
-    imageUrl = imageData.url;
-    log('Using direct image URL: %s', imageUrl);
-  }
-  // If neither format exists, throw error
-  else {
-    throw new Error('Invalid image response: missing both b64_json and url fields');
-  }
+  const [imageUrl, ...extraImageUrls] = decodedUrls;
+  log(
+    'Decoded %d image(s) from upstream (paramless=%s)',
+    decodedUrls.length,
+    paramlessImageMode ?? false,
+  );
 
   return {
     imageUrl,
+    ...(extraImageUrls.length > 0 ? { extraImageUrls } : {}),
     ...(img.usage
       ? {
           modelUsage: convertOpenAIImageUsage(img.usage, await getModelPricing(model, provider)),
