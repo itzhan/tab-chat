@@ -30,15 +30,27 @@ export async function register() {
       } else {
         setGlobalDispatcher(
           new Agent({
+            // Time we'll wait for the response *headers* after the request is
+            // sent. Undici's default is 300s — way too long: when the upstream
+            // (e.g. a sub2api proxy) accepts the socket but hangs without
+            // ever returning headers, the client sits and waits. 60s is more
+            // than enough for any sane proxy to return at least the status
+            // line, so we surface the failure to the user quickly.
+            //
+            // bodyTimeout intentionally left at undici's 300s default — long
+            // streams (chat, image gen) can pause between chunks; we only
+            // care about the *initial* hang.
+            bodyTimeout: 300_000,
             connect: { timeout: 30_000 },
             connections: 100, // max concurrent sockets per origin
+            headersTimeout: 60_000,
             keepAliveMaxTimeout: 60_000,
             keepAliveTimeout: 30_000,
             pipelining: 1,
           }),
         );
         console.info(
-          '[instrumentation] global undici Agent: keep-alive=30s, connections=100/origin',
+          '[instrumentation] global undici Agent: keep-alive=30s, connections=100/origin, headersTimeout=60s',
         );
       }
     } catch (err) {
