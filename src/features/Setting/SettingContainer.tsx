@@ -23,7 +23,10 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
         style={{
           background:
             variant === 'secondary' ? theme.colorBgContainerSecondary : cssVar.colorBgContainer,
-          overflowX: 'hidden',
+          // Allow horizontal scroll when inner forms / model lists overflow
+          // (e.g. provider settings on narrow viewports). Previously hard-set
+          // to `hidden` which clipped the API key input + 代理地址 columns.
+          overflowX: 'auto',
           overflowY: 'auto',
           ...style,
         }}
