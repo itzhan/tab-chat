@@ -60,6 +60,11 @@ export default eslint(
       '@eslint-react/naming-convention/ref-name': 0,
       '@eslint-react/naming-convention/use-state': 0,
       '@eslint-react/no-array-index-key': 0,
+      // Vite's chunk-splitter sometimes ends up emitting `use(SomeContext)` calls
+      // before React's `use` global is defined in the chunk's scope, blowing up
+      // with "use is not defined" at runtime. Force everyone to keep using
+      // `useContext(...)` so the autofix doesn't silently break the build.
+      '@eslint-react/no-use-context': 0,
       '@next/next/no-img-element': 0,
       '@typescript-eslint/no-use-before-define': 0,
       '@typescript-eslint/no-useless-constructor': 0,

@@ -1,7 +1,7 @@
 import { Button, Modal } from '@lobehub/ui';
 import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
-import { memo, use, useState } from 'react';
+import { memo, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -28,7 +28,7 @@ const ModelConfigModal = memo<ModelConfigModalProps>(({ id, open, setOpen }) => 
   const closeModal = () => {
     setOpen(false);
   };
-  const { showDeployName } = use(ProviderSettingsContext);
+  const { showDeployName } = useContext(ProviderSettingsContext);
 
   return (
     <Modal

@@ -4,8 +4,8 @@ import {
   createContext,
   type CSSProperties,
   type ReactNode,
-  use,
   useCallback,
+  useContext,
   useEffect,
   useRef,
 } from 'react';
@@ -62,7 +62,7 @@ ScrollSignalProvider.displayName = 'ScrollSignalProvider';
  * If no provider is present this is a no-op.
  */
 export const useScrollSignal = (cb: ScrollSubscriber) => {
-  const subscribe = use(ScrollSignalContext);
+  const subscribe = useContext(ScrollSignalContext);
   // Re-attach when the callback identity changes.
   const cbRef = useRef(cb);
   useEffect(() => {

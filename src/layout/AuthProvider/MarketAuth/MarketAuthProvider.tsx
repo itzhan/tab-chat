@@ -2,7 +2,7 @@
 
 import { App } from 'antd';
 import { type ReactNode } from 'react';
-import { createContext, use, useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mutate as globalMutate } from 'swr';
 
@@ -806,7 +806,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
  * Hook for using Market authorization
  */
 export const useMarketAuth = (): MarketAuthContextType => {
-  const context = use(MarketAuthContext);
+  const context = useContext(MarketAuthContext);
   if (!context) {
     throw new Error('useMarketAuth must be used within a MarketAuthProvider');
   }

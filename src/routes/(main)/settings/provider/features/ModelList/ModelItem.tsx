@@ -5,7 +5,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { LucidePencil, TrashIcon } from 'lucide-react';
 import { type AiProviderModelListItem } from 'model-bank';
 import { AiModelSourceEnum } from 'model-bank';
-import React, { memo, use, useState } from 'react';
+import React, { memo, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelInfoTags } from '@/components/ModelSelect';
@@ -79,7 +79,7 @@ const ModelItem = memo<ModelItemProps>(
     type,
   }) => {
     const { t } = useTranslation(['modelProvider', 'components', 'models', 'common']);
-    const { modelEditable, readOnly } = use(ProviderSettingsContext);
+    const { modelEditable, readOnly } = useContext(ProviderSettingsContext);
 
     const [activeAiProvider, isModelLoading, toggleModelEnabled, removeAiModel] = useAiInfraStore(
       (s) => [
