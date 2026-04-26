@@ -13,7 +13,6 @@ const AVAILABLE_ITEMS: { id: string; label: string; description?: string }[] = [
   { id: 'recents', label: '最近' },
   { id: 'community', label: '社区 / Community' },
   { id: 'resource', label: '资料 / 知识库' },
-  { id: 'memory', label: '记忆 / Memory' },
 ];
 
 const SidebarAdmin = memo(() => {

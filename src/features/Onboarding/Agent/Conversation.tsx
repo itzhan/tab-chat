@@ -131,7 +131,6 @@ const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
               allowExpand={false}
               leftActions={chatInputLeftActions}
               rightActions={chatInputRightActions}
-              showRuntimeConfig={false}
             />
           </>
         )}

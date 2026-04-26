@@ -5,9 +5,8 @@ import { Button } from '@lobehub/ui';
 import { ModelProvider } from 'model-bank';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import urlJoin from 'url-join';
 
+import { createApiKeySetupModal } from '@/features/ApiKeySetupModal';
 import BaseErrorForm from '@/features/Conversation/Error/BaseErrorForm';
 import { useProviderName } from '@/hooks/useProviderName';
 import { type GlobalLLMProviderKey } from '@/types/user/settings/modelProvider';
@@ -19,7 +18,6 @@ interface GenerationInvalidAPIKeyProps {
 
 const GenerationInvalidAPIKey = memo<GenerationInvalidAPIKeyProps>(({ provider, onNavigate }) => {
   const { t } = useTranslation(['modelProvider', 'error']);
-  const navigate = useNavigate();
   const providerName = useProviderName(provider as GlobalLLMProviderKey);
 
   return (
@@ -30,7 +28,7 @@ const GenerationInvalidAPIKey = memo<GenerationInvalidAPIKeyProps>(({ provider, 
         <Button
           type={'primary'}
           onClick={() => {
-            navigate(urlJoin('/settings/provider', provider || 'all'));
+            createApiKeySetupModal();
             onNavigate?.();
           }}
         >

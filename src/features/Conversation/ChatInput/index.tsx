@@ -104,10 +104,6 @@ export interface ChatInputProps {
    */
   sendMenu?: MenuProps;
   /**
-   * Whether to show the runtime config bar (Local/Cloud/Auto Approve)
-   */
-  showRuntimeConfig?: boolean;
-  /**
    * Remove a small margin when placed adjacent to the ChatList
    */
   skipScrollMarginWithList?: boolean;
@@ -133,7 +129,6 @@ const ChatInput = memo<ChatInputProps>(
     sendMenu,
     sendAreaPrefix,
     sendButtonProps: customSendButtonProps,
-    showRuntimeConfig = true,
     onEditorReady,
     skipScrollMarginWithList,
   }) => {
@@ -254,15 +249,15 @@ const ChatInput = memo<ChatInputProps>(
               <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
                 <Alert
                   closable
-                  type={
-                    /已用完|未开通|未绑定|套餐|空间/.test(sendMessageErrorMsg)
-                      ? 'warning'
-                      : 'secondary'
-                  }
                   title={
                     /已用完|未开通|未绑定|套餐|空间/.test(sendMessageErrorMsg)
                       ? sendMessageErrorMsg
                       : t('input.errorMsg', { errorMsg: sendMessageErrorMsg })
+                  }
+                  type={
+                    /已用完|未开通|未绑定|套餐|空间/.test(sendMessageErrorMsg)
+                      ? 'warning'
+                      : 'secondary'
                   }
                   onClose={clearSendMessageError}
                 />
@@ -289,7 +284,6 @@ const ChatInput = memo<ChatInputProps>(
               leftContent={leftContent}
               runtimeConfigSlot={runtimeConfigSlot}
               sendAreaPrefix={sendAreaPrefix}
-              showRuntimeConfig={showRuntimeConfig}
             />
           </>
         )}

@@ -149,10 +149,7 @@ class ChatService {
 
     // =================== 1.1 process user memories =================== //
 
-    const userLevelMemoryEnabled = settingsSelectors.memoryEnabled(getUserStoreState());
-    // Agent-level memory toggle takes priority over user-level setting,
-    // matching the logic in useMemoryEnabled hook
-    const enableUserMemories = chatConfig.memory?.enabled ?? userLevelMemoryEnabled;
+    const enableUserMemories = false;
     const userMemorySettings = settingsSelectors.currentMemorySettings(getUserStoreState());
     const effectiveMemoryEffort =
       chatConfig.memory?.effort ?? userMemorySettings.effort ?? 'medium';
@@ -307,7 +304,7 @@ class ChatService {
         stream: chatConfig.enableStreaming !== false,
         tools,
       },
-      { ...options, agentId: targetAgentId, topicId },
+      { ...options, agentId: targetAgentId, chatConfig, topicId },
     );
   };
 
@@ -367,8 +364,10 @@ class ChatService {
       ? 'responses'
       : 'chatCompletion';
 
-    // Get the chat config to check streaming preference
-    const chatConfig = agentChatConfigSelectors.currentChatConfig(getAgentStoreState());
+    // Prefer pre-resolved chatConfig from the caller (target agent's config).
+    // Fallback to active-agent selector for direct callers like fetchPresetTaskResult.
+    const chatConfig =
+      options?.chatConfig ?? agentChatConfigSelectors.currentChatConfig(getAgentStoreState());
 
     delete (res as any).scope;
     // Fork flow stores market metadata in agent.params; must not reach OpenAI-compatible / Responses API

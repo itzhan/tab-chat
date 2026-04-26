@@ -1,14 +1,14 @@
-import { BRANDING_NAME } from '@lobechat/business-const';
 import { Alert, Button, Flexbox, Icon, Input, Skeleton, Text } from '@lobehub/ui';
 import { type FormInstance, type InputRef } from 'antd';
 import { Badge, Divider, Form } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { ChevronRight, Mail } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 import AuthIcons from '@/components/AuthIcons';
-import { PRIVACY_URL, TERMS_URL } from '@/const/url';
 
 import AuthCard from '../../../../features/AuthCard';
 
@@ -54,6 +54,7 @@ export const SignInEmailStep = ({
 }: SignInEmailStepProps) => {
   const { t } = useTranslation('auth');
   const emailInputRef = useRef<InputRef>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     emailInputRef.current?.focus();
@@ -76,39 +77,22 @@ export const SignInEmailStep = ({
     return t(key, { defaultValue: `Continue with ${normalized}` });
   };
 
+  const signupHref = `/signup${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   const footer = (
-    <Text fontSize={13} type={'secondary'}>
-      <Trans
-        i18nKey={'footer.agreement'}
-        ns={'auth'}
-        components={{
-          privacy: (
-            <a
-              href={PRIVACY_URL}
-              style={{ color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              {t('footer.terms')}
-            </a>
-          ),
-          terms: (
-            <a
-              href={TERMS_URL}
-              style={{ color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              {t('footer.privacy')}
-            </a>
-          ),
-        }}
-      />
-    </Text>
+    <Flexbox horizontal align={'center'} gap={6} justify={'center'}>
+      <Text fontSize={13} type={'secondary'}>
+        {t('betterAuth.signin.noAccount')}
+      </Text>
+      <Link href={signupHref}>
+        <Text fontSize={13} style={{ textDecoration: 'underline' }}>
+          {t('betterAuth.signin.signupLink')}
+        </Text>
+      </Link>
+    </Flexbox>
   );
 
   return (
-    <AuthCard
-      footer={footer}
-      subtitle={t('signin.subtitle', { appName: BRANDING_NAME })}
-      title={'Agent teammates that grow with you'}
-    >
+    <AuthCard footer={footer} title={t('betterAuth.signin.emailStep.title')}>
       {!serverConfigInit && (
         <Flexbox gap={12}>
           <Skeleton.Button active block size="large" />

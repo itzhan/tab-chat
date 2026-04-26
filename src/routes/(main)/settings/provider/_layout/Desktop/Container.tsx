@@ -8,7 +8,7 @@ import SettingContainer from '@/features/Setting/SettingContainer';
 
 const Container: FC<PropsWithChildren> = ({ children }) => {
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <Flexbox flex={1} height={'100%'} style={{ minWidth: 0 }}>
       <NavHeader />
       <SettingContainer
         maxWidth={1024}

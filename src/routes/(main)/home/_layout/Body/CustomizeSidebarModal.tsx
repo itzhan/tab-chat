@@ -54,7 +54,6 @@ const ALL_SIDEBAR_ITEMS: SidebarItemConfig[] = [
   { id: 'video', labelKey: 'tab.video', routeId: 'video' },
   { id: 'community', labelKey: 'tab.community', routeId: 'community' },
   { id: 'resource', labelKey: 'tab.resource', routeId: 'resource' },
-  { id: 'memory', labelKey: 'tab.memory', routeId: 'memory' },
   { id: 'membership', labelKey: 'tab.membership', routeId: 'membership' },
 ];
 

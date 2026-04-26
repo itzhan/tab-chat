@@ -84,9 +84,27 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
   // Admin-managed builtin skill allowlist. `null` = never configured → show all.
   // Admins always see everything.
   const isAdmin = useUserStore(userProfileSelectors.isAdmin);
-  const { data: skillAllowlist } = useSWR('chat.skillAllowlist', () =>
-    adminService.getMyBuiltinSkillAllowlist(),
+  // Combine admin allowlist + overrides into a single SWR call.
+  // Admin config rarely changes; long dedupe + no focus/reconnect revalidate
+  // prevents refetching when ChatInput remounts during typing/sending.
+  const { data: adminSkillConfig } = useSWR(
+    'chat.adminSkillConfig',
+    async () => {
+      const [allowlist, overrides] = await Promise.all([
+        adminService.getMyBuiltinSkillAllowlist(),
+        adminService.getMyBuiltinSkillOverrides(),
+      ]);
+      return { allowlist, overrides };
+    },
+    {
+      dedupingInterval: 5 * 60 * 1000,
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
   );
+  const skillAllowlist = adminSkillConfig?.allowlist;
+  const skillOverridesRaw = adminSkillConfig?.overrides;
   const allowlistSet = useMemo(
     () => (Array.isArray(skillAllowlist) ? new Set(skillAllowlist) : null),
     [skillAllowlist],
@@ -97,10 +115,6 @@ export const useControls = ({ setUpdating }: { setUpdating: (updating: boolean) 
     return allowlistSet.has(identifier);
   };
 
-  // Admin title/description overrides for builtin skills
-  const { data: skillOverridesRaw } = useSWR('chat.skillOverrides', () =>
-    adminService.getMyBuiltinSkillOverrides(),
-  );
   const skillOverrides: Record<string, { title?: string; description?: string }> =
     (skillOverridesRaw ?? {}) as any;
   const overrideTitle = (id: string, fallback?: string) => skillOverrides[id]?.title ?? fallback;

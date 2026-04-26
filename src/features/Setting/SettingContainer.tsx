@@ -23,9 +23,12 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
         style={{
           background:
             variant === 'secondary' ? theme.colorBgContainerSecondary : cssVar.colorBgContainer,
-          // Allow horizontal scroll when inner forms / model lists overflow
-          // (e.g. provider settings on narrow viewports). Previously hard-set
-          // to `hidden` which clipped the API key input + 代理地址 columns.
+          // Vertical scroll is the normal case; horizontal scroll only kicks in
+          // if the form contents really cannot fit (e.g. extremely narrow split
+          // panes). The flex chain above this component now passes
+          // min-width: 0 down so the inner Flexbox can shrink below maxWidth
+          // and adapt to the actual viewport width.
+          minWidth: 0,
           overflowX: 'auto',
           overflowY: 'auto',
           ...style,
@@ -36,9 +39,10 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
         <Flexbox
           flex={1}
           gap={36}
-          width={'100%'}
           style={{
             maxWidth,
+            minWidth: 0,
+            width: '100%',
           }}
         >
           {children}

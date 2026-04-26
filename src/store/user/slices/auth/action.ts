@@ -83,14 +83,13 @@ export class UserAuthActionImpl {
   };
 
   openLogin = async (): Promise<void> => {
-    // Skip if already on a login page (/signin, /signup)
     const pathname = location.pathname;
-    if (pathname.startsWith('/signin') || pathname.startsWith('/signup')) {
-      return;
-    }
+    // /signin and /signup are still reachable as standalone pages — but on those
+    // routes the in-place modal is redundant.
+    if (pathname.startsWith('/signin') || pathname.startsWith('/signup')) return;
 
-    const currentUrl = location.toString();
-    window.location.href = `/signin?callbackUrl=${encodeURIComponent(currentUrl)}`;
+    const { createAuthModal } = await import('@/features/AuthModal');
+    createAuthModal({ callbackUrl: location.toString() });
   };
 
   refreshAuthProviders = async (): Promise<void> => {

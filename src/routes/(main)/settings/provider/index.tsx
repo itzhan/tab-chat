@@ -25,6 +25,7 @@ export const ProviderLayout = memo(() => {
       width={'100%'}
       style={{
         maxHeight: '100%',
+        minWidth: 0,
       }}
     >
       <ProviderMenu mobile={false} onProviderSelect={handleProviderSelect} />

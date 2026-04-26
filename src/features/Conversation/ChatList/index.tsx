@@ -4,11 +4,8 @@ import { type ReactNode } from 'react';
 import { memo, useCallback } from 'react';
 
 import { useFetchAgentDocuments } from '@/hooks/useFetchAgentDocuments';
-import { useFetchTopicMemories } from '@/hooks/useFetchMemoryForTopic';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
 import { useChatStore } from '@/store/chat';
-import { useUserStore } from '@/store/user';
-import { settingsSelectors } from '@/store/user/selectors';
 
 import WideScreenContainer from '../../WideScreenContainer';
 import SkeletonList from '../components/SkeletonList';
@@ -43,7 +40,6 @@ export interface ChatListProps {
 const ChatList = memo<ChatListProps>(({ disableActionsBar, welcome, itemContent, showWelcome }) => {
   // Fetch messages (SWR key is null when skipFetch is true)
   const context = useConversationStore((s) => s.context);
-  const enableUserMemories = useUserStore(settingsSelectors.memoryEnabled);
   const [skipFetch, useFetchMessages] = useConversationStore((s) => [
     dataSelectors.skipFetch(s),
     s.useFetchMessages,
@@ -51,13 +47,12 @@ const ChatList = memo<ChatListProps>(({ disableActionsBar, welcome, itemContent,
   const activeAgentId = useChatStore((s) => s.activeAgentId);
   useFetchMessages(context, skipFetch);
 
-  // Skip fetching notebook and memories for share pages (they require authentication)
+  // Skip fetching notebook for share pages (they require authentication)
   const isSharePage = !!context.topicShareId;
 
   // Fetch notebook documents when topic is selected (skip for share pages)
   useFetchAgentDocuments(isSharePage ? undefined : activeAgentId);
   useFetchNotebookDocuments(isSharePage ? undefined : context.topicId!);
-  useFetchTopicMemories(enableUserMemories && !isSharePage ? context.topicId : undefined);
 
   // Use selectors for data
 

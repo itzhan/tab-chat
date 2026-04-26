@@ -211,7 +211,6 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
                 placeholder={
                   isAgent ? t('createModal.placeholder') : t('createModal.groupPlaceholder')
                 }
-                showRuntimeConfig={false}
               />
             </ChatInputProvider>
           )}

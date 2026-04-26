@@ -20,7 +20,6 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { type ActionToolbarProps } from '../ActionBar';
 import ActionBar from '../ActionBar';
 import InputEditor from '../InputEditor';
-import RuntimeConfig from '../RuntimeConfig';
 import SendArea from '../SendArea';
 import TypoBar from '../TypoBar';
 import ContextContainer from './ContextContainer';
@@ -64,19 +63,17 @@ interface DesktopChatInputProps extends ActionToolbarProps {
   leftContent?: ReactNode;
   placeholder?: ReactNode;
   /**
-   * Custom node to render in place of the default RuntimeConfig bar.
-   * When provided, used instead of `<RuntimeConfig />` (ignores `showRuntimeConfig`).
+   * Custom node to render below the chat input (used by some chat surfaces
+   * to inject a working-directory bar). When omitted, nothing renders.
    */
   runtimeConfigSlot?: ReactNode;
   sendAreaPrefix?: ReactNode;
   showFootnote?: boolean;
-  showRuntimeConfig?: boolean;
 }
 
 const DesktopChatInput = memo<DesktopChatInputProps>(
   ({
     showFootnote,
-    showRuntimeConfig = true,
     runtimeConfigSlot,
     inputContainerProps,
     extentHeaderContent,
@@ -170,7 +167,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
         >
           <InputEditor placeholder={placeholder} />
         </ChatInput>
-        {runtimeConfigSlot ?? (showRuntimeConfig && <RuntimeConfig />)}
+        {runtimeConfigSlot}
         {showFootnote && !expand && (
           <Center style={{ pointerEvents: 'none', zIndex: 100 }}>
             <Text className={styles.footnote} type={'secondary'}>
