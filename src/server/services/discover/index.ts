@@ -1136,7 +1136,7 @@ export class DiscoverService {
     if (builtinTool) {
       log('getPluginDetail: found builtin tool for identifier=%s', identifier);
       const plugin: DiscoverPluginDetail = {
-        author: 'LobeHub',
+        author: 'TabCode',
         avatar: builtinTool.manifest.meta.avatar || '',
         category: undefined,
         createdAt: '',
