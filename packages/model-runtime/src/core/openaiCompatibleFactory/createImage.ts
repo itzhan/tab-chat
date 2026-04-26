@@ -64,6 +64,13 @@ async function generateByImageMode(
     delete userInput.size;
   }
 
+  // sub2api / OpenAI both treat the absence of `quality` the same as `auto`.
+  // Drop the field so we don't have to maintain an upstream allow-list of the
+  // exact `'auto'` literal as a valid value.
+  if (userInput.quality === 'auto') {
+    delete userInput.quality;
+  }
+
   const defaultInput = {
     // Paramless gateways (sub2api gpt-image-2 etc.) reject or silently
     // ignore `n`; the user expresses count inside the prompt instead.

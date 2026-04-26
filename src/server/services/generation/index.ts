@@ -104,6 +104,12 @@ export class GenerationService {
     log('fetchImageFromUrl: done, buffer size:', fetchedBuffer.length);
 
     log('sharp metadata: start');
+    // Read width/height/format only — no encoding or resize is performed.
+    // Per product decision the upstream bytes are stored as-is so users get
+    // the full-fidelity image they were billed for. The thumbnail is just an
+    // alias of the original (uploadImageForGeneration's isIdenticalBuffer
+    // fast-path means it lands in S3 once and the same key is reused).
+    // Trade-off: bigger storage / bandwidth than the previous webp pipeline.
     const { format, width, height } = await sharp(fetchedBuffer).metadata();
     log('Image metadata:', { format, height, width });
 
@@ -111,76 +117,23 @@ export class GenerationService {
       throw new Error(`Invalid image format: ${format}, url: ${url}`);
     }
 
-    // Re-encode the "original" as WebP to bound storage cost. Provider
-    // gateways frequently ignore `output_format` and return 1-2MB PNGs even
-    // when asked for WebP; transcoding here reliably drops that to ~10-20%
-    // of the size with no perceptible quality loss at q=85.
-    // A small QUALITY env var lets ops tune this without a code change.
-    const webpQuality = Number(process.env.GENERATION_WEBP_QUALITY ?? 100) || 100;
-    const originalImageBuffer =
-      format === 'webp'
-        ? fetchedBuffer
-        : await sharp(fetchedBuffer).webp({ quality: webpQuality }).toBuffer();
-    const originalMimeType = format === 'webp' ? fetchedMimeType : 'image/webp';
+    const originalImageBuffer = fetchedBuffer;
+    const originalMimeType = fetchedMimeType;
 
-    log('Re-encode summary:', {
-      finalSize: originalImageBuffer.length,
-      originalFormat: format,
-      originalSize: fetchedBuffer.length,
-      quality: webpQuality,
-      skipped: format === 'webp',
-    });
-
-    // Hash the final (post-encode) buffer so dedup / filename reflect bytes
-    // that actually land in storage.
     log('sha256: start');
     const originalHash = sha256(originalImageBuffer);
     log('sha256: done');
 
-    const {
-      shouldResize: shouldResizeBySize,
-      thumbnailWidth,
-      thumbnailHeight,
-    } = calculateThumbnailDimensions(width, height);
-    // The "original" is now always WebP, so thumbnail only needs resizing
-    // when dimensions exceed the cap.
-    const shouldResize = shouldResizeBySize;
+    const thumbnailBuffer = originalImageBuffer;
+    const thumbnailHash = originalHash;
 
-    log('Thumbnail processing decision:', {
-      shouldResize,
-      shouldResizeBySize,
-      thumbnailHeight,
-      thumbnailWidth,
-    });
+    const extension =
+      (url.startsWith('data:') ? null : inferFileExtensionFromImageUrl(url)) ||
+      mime.getExtension(originalMimeType) ||
+      format ||
+      'bin';
 
-    const thumbnailBuffer = shouldResize
-      ? await sharp(originalImageBuffer)
-          .resize(thumbnailWidth, thumbnailHeight)
-          .webp({ quality: webpQuality })
-          .toBuffer()
-      : originalImageBuffer;
-
-    const thumbnailHash = sha256(thumbnailBuffer);
-
-    log('Image transformation completed successfully');
-
-    // Since we always emit WebP post-transform, the extension is fixed for
-    // non-webp inputs. Kept the data-URI path for the edge case where we
-    // were handed a WebP data URI directly.
-    let extension: string;
-    if (format === 'webp') {
-      if (url.startsWith('data:')) {
-        const mimeExtension = mime.getExtension(originalMimeType);
-        if (!mimeExtension) {
-          throw new Error(`Unable to determine file extension for MIME type: ${originalMimeType}`);
-        }
-        extension = mimeExtension;
-      } else {
-        extension = inferFileExtensionFromImageUrl(url) || 'webp';
-      }
-    } else {
-      extension = 'webp';
-    }
+    log('Image transformation completed successfully (no transcoding)');
 
     return {
       image: {
@@ -194,12 +147,12 @@ export class GenerationService {
       },
       thumbnailImage: {
         buffer: thumbnailBuffer,
-        extension: 'webp',
+        extension,
         hash: thumbnailHash,
-        height: shouldResize ? thumbnailHeight : height,
-        mime: 'image/webp',
+        height,
+        mime: originalMimeType,
         size: thumbnailBuffer.length,
-        width: shouldResize ? thumbnailWidth : width,
+        width,
       },
     };
   }

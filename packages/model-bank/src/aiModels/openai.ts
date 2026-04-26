@@ -12,6 +12,10 @@ import {
 export const gptImage1ParamsSchema: ModelParamsSchema = {
   imageUrls: { default: [] },
   prompt: { default: '' },
+  quality: {
+    default: 'auto',
+    enum: ['auto', 'low', 'medium', 'high'],
+  },
   size: {
     default: 'auto',
     enum: ['auto', '1024x1024', '1536x1024', '1024x1536'],
