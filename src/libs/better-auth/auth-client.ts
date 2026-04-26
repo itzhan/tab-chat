@@ -8,6 +8,16 @@ import { createAuthClient } from 'better-auth/react';
 
 import { type auth } from '@/auth';
 
+export const authClient = createAuthClient({
+  plugins: [
+    adminClient(),
+    inferAdditionalFields<typeof auth>(),
+    genericOAuthClient(),
+    // Always include magicLinkClient - server will reject if not enabled
+    magicLinkClient(),
+  ],
+});
+
 export const {
   changeEmail,
   linkSocial,
@@ -22,12 +32,4 @@ export const {
   signUp,
   unlinkAccount,
   useSession,
-} = createAuthClient({
-  plugins: [
-    adminClient(),
-    inferAdditionalFields<typeof auth>(),
-    genericOAuthClient(),
-    // Always include magicLinkClient - server will reject if not enabled
-    magicLinkClient(),
-  ],
-});
+} = authClient;

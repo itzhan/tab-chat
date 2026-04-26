@@ -10,7 +10,7 @@ import { mutate } from 'swr';
 
 import { message } from '@/components/AntdStaticMethods';
 import AuthIcons from '@/components/AuthIcons';
-import { signIn, signUp } from '@/libs/better-auth/auth-client';
+import { authClient, signIn, signUp } from '@/libs/better-auth/auth-client';
 import { isBuiltinProvider, normalizeProviderId } from '@/libs/better-auth/utils/client';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 
@@ -54,11 +54,14 @@ const AuthModalContent = memo<AuthModalContentProps>(({ initialMode = 'signin', 
 
   const onAuthSuccess = () => {
     close();
-    // Skip the heavy `window.location.reload()` (~1–2s of bundle/hydration tax).
-    // better-auth's `useSession()` is reactive and picks up the new cookie via
-    // `UserUpdater`; once `isSignedIn` flips, the StoreInitialization hooks
-    // re-run with the logged-in user. We nudge SWR to revalidate every key so
-    // anything cached in the anonymous state re-fetches under the new session.
+    // Force better-auth's nanostore to re-fetch the session under the cookie that
+    // signin/signup just set. Without this notify, useSession keeps returning its
+    // cached anonymous result, isSignedIn never flips → useInitUserState's SWR key
+    // stays null → isUserStateInit stays false → MarketAuthProvider sticks at
+    // 'loading' forever, leaving any auth-gated page stuck on a spinner.
+    authClient.$store.notify('$sessionSignal');
+    // Revalidate any SWR cache populated while anonymous so it re-fetches under
+    // the new session.
     void mutate(() => true, undefined, { revalidate: true });
   };
 
