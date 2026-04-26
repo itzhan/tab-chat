@@ -6,6 +6,7 @@ import { Divider, Form, Input } from 'antd';
 import { ChevronRight, Lock, Mail } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { mutate } from 'swr';
 
 import { message } from '@/components/AntdStaticMethods';
 import AuthIcons from '@/components/AuthIcons';
@@ -53,10 +54,12 @@ const AuthModalContent = memo<AuthModalContentProps>(({ initialMode = 'signin', 
 
   const onAuthSuccess = () => {
     close();
-    // Force a reload so the global UserUpdater + SWR caches re-fetch with the
-    // new session cookie. Without this, the in-page state would stay anonymous
-    // until the next route navigation.
-    window.location.reload();
+    // Skip the heavy `window.location.reload()` (~1–2s of bundle/hydration tax).
+    // better-auth's `useSession()` is reactive and picks up the new cookie via
+    // `UserUpdater`; once `isSignedIn` flips, the StoreInitialization hooks
+    // re-run with the logged-in user. We nudge SWR to revalidate every key so
+    // anything cached in the anonymous state re-fetches under the new session.
+    void mutate(() => true, undefined, { revalidate: true });
   };
 
   const handleSocialSignIn = async (provider: string) => {
