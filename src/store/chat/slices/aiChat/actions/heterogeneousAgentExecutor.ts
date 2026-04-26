@@ -9,7 +9,6 @@ import type {
 } from '@lobechat/types';
 import { t } from 'i18next';
 
-import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 import { messageService } from '@/services/message';
 import type { ChatStore } from '@/store/chat/store';
 import { markdownToTxt } from '@/utils/markdownToTxt';
@@ -258,6 +257,10 @@ export const executeHeterogeneousAgent = async (
   get: () => ChatStore,
   params: HeterogeneousAgentExecutorParams,
 ): Promise<void> => {
+  if (!isDesktop) return;
+
+  const { heterogeneousAgentService } = await import('@/services/electron/heterogeneousAgent');
+
   const {
     heterogeneousProvider,
     assistantMessageId,

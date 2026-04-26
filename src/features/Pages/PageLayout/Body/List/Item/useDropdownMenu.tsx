@@ -7,8 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { isDesktop } from '@/const/version';
-import { pluginRegistry } from '@/features/Electron/titlebar/RecentlyViewed/plugins';
-import { useElectronStore } from '@/store/electron';
 import { usePageStore } from '@/store/page';
 
 interface ActionProps {
@@ -23,7 +21,6 @@ export const useDropdownMenu = ({
   const { t } = useTranslation(['common', 'file']);
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
-  const addTab = useElectronStore((s) => s.addTab);
   const removePage = usePageStore((s) => s.removePage);
   const duplicatePage = usePageStore((s) => s.duplicatePage);
 
@@ -65,11 +62,19 @@ export const useDropdownMenu = ({
                 label: t('pageList.actions.openInNewTab', { ns: 'file' }),
                 onClick: () => {
                   const url = `/page/${pageId}`;
-                  const reference = pluginRegistry.parseUrl(url, '');
-                  if (reference) {
-                    addTab(reference);
-                    navigate(url);
-                  }
+                  void Promise.all([
+                    import('@/features/Electron/titlebar/RecentlyViewed/plugins'),
+                    import('@/store/electron'),
+                  ])
+                    .then(([{ pluginRegistry }, { useElectronStore }]) => {
+                      const reference = pluginRegistry.parseUrl(url, '');
+                      if (!reference) return;
+                      useElectronStore.getState().addTab(reference);
+                      navigate(url);
+                    })
+                    .catch((error) => {
+                      console.error('Failed to open page in desktop tab:', error);
+                    });
                 },
               },
               { type: 'divider' as const },
@@ -96,6 +101,6 @@ export const useDropdownMenu = ({
           onClick: handleDelete,
         },
       ].filter(Boolean) as MenuProps['items'],
-    [t, toggleEditing, handleDuplicate, handleDelete, pageId, addTab, navigate],
+    [t, toggleEditing, handleDuplicate, handleDelete, pageId, navigate],
   );
 };

@@ -465,13 +465,14 @@ export class AiProviderActionImpl {
   useFetchAiProviderRuntimeState = (
     isLoginOnInit: boolean | undefined,
     isSyncActive?: boolean,
+    enabled = true,
   ): SWRResponse<AiProviderRuntimeStateWithBuiltinModels | undefined> => {
     void isSyncActive;
     const isLogin = isLoginOnInit;
     const isAuthLoaded = useUserStore(authSelectors.isLoaded);
     // Only fetch when auth is loaded and login status is explicitly defined (true or false)
     // Prevents unnecessary requests when login state is null/undefined
-    const shouldFetch = isAuthLoaded && isLogin !== null && isLogin !== undefined;
+    const shouldFetch = enabled && isAuthLoaded && isLogin !== null && isLogin !== undefined;
 
     return useClientDataSWR<AiProviderRuntimeStateWithBuiltinModels | undefined>(
       shouldFetch ? [AiProviderSwrKey.fetchAiProviderRuntimeState, isLogin] : null,

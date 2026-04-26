@@ -10,7 +10,6 @@ import { useCreateNewModal } from '@/features/LibraryModal';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useCreateMenuItems } from '@/routes/(main)/home/_layout/hooks';
-import { electronSystemService } from '@/services/electron/system';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelectors';
 import { useChatStore } from '@/store/chat';
@@ -112,6 +111,7 @@ export const useCommandMenu = () => {
   const handleExternalLink = useCallback(
     async (url: string) => {
       if (isDesktop) {
+        const { electronSystemService } = await import('@/services/electron/system');
         await electronSystemService.openExternalLink(url);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer');

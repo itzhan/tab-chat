@@ -28,28 +28,40 @@ const setNavPanelSnapshot = (snapshot: NavPanelSnapshot) => {
   listeners.forEach((listener) => listener());
 };
 
-const NavPanel = memo(() => {
+interface NavPanelProps {
+  showHomeFallback?: boolean;
+}
+
+const NavPanelDrawerAnchor = () => (
+  <div
+    id={NAV_PANEL_RIGHT_DRAWER_ID}
+    style={{
+      height: '100%',
+      position: 'relative',
+      width: 0,
+      zIndex: 10,
+    }}
+  />
+);
+
+const NavPanel = memo<NavPanelProps>(({ showHomeFallback = true }) => {
   const panelContent = useSyncExternalStore(
     subscribeNavPanel,
     getNavPanelSnapshot,
     getNavPanelSnapshot,
   );
 
-  // Use home Content as fallback when no portal content is provided
-  const activeContent = panelContent || { key: 'home', node: <Sidebar /> };
+  // Desktop keeps the home sidebar as a fallback. Web passes showHomeFallback=false
+  // so non-home pages do not mount the agent/recents sidebar before their own portal is ready.
+  const activeContent =
+    panelContent || (showHomeFallback ? { key: 'home', node: <Sidebar /> } : null);
+
+  if (!activeContent) return <NavPanelDrawerAnchor />;
 
   return (
     <>
       <NavPanelDraggable activeContent={activeContent} />
-      <div
-        id={NAV_PANEL_RIGHT_DRAWER_ID}
-        style={{
-          height: '100%',
-          position: 'relative',
-          width: 0,
-          zIndex: 10,
-        }}
-      />
+      <NavPanelDrawerAnchor />
     </>
   );
 });
@@ -72,7 +84,10 @@ export const NavPanelPortal = memo<NavPanelPortalProps>(({ children, navKey = 'd
       key: navKey,
       node: children,
     });
-    // Intentionally keep previous content until new one mounts.
+
+    return () => {
+      if (currentSnapshot?.key === navKey) setNavPanelSnapshot(null);
+    };
   }, [children, navKey]);
 
   return null;

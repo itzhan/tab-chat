@@ -13,6 +13,19 @@ import Loading from '@/components/Loading/BrandTextLoading';
 import { isDesktop } from '@/const/version';
 import { BANNER_HEIGHT } from '@/features/AlertBanner/CloudBanner';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
+import NavPanel from '@/features/NavPanel';
+import { useFeedbackModal } from '@/hooks/useFeedbackModal';
+import { usePlatform } from '@/hooks/usePlatform';
+import { MarketAuthProvider } from '@/layout/AuthProvider/MarketAuth';
+import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
+import dynamic from '@/libs/next/dynamic';
+import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
+
+import DesktopHome from '../home';
+import DesktopHomeLayout from '../home/_layout';
+import DesktopLayoutContainer from './DesktopLayoutContainer';
+import RegisterHotkeys from './RegisterHotkeys';
+import { styles } from './style';
 
 // Electron-only surfaces — lazy so the web bundle doesn't pay for them.
 // On web `isDesktop` is false, the lazy imports are never triggered, and the chunks
@@ -21,20 +34,6 @@ const DesktopFileMenuBridge = lazy(() => import('@/features/DesktopFileMenuBridg
 const DesktopNavigationBridge = lazy(() => import('@/features/DesktopNavigationBridge'));
 const AuthRequiredModal = lazy(() => import('@/features/Electron/AuthRequiredModal'));
 const TitleBar = lazy(() => import('@/features/Electron/titlebar/TitleBar'));
-import NavPanel from '@/features/NavPanel';
-import { useFeedbackModal } from '@/hooks/useFeedbackModal';
-import { usePlatform } from '@/hooks/usePlatform';
-import { MarketAuthProvider } from '@/layout/AuthProvider/MarketAuth';
-import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
-import dynamic from '@/libs/next/dynamic';
-import { DndContextWrapper } from '@/routes/(main)/resource/features/DndContextWrapper';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
-
-import DesktopHome from '../home';
-import DesktopHomeLayout from '../home/_layout';
-import DesktopLayoutContainer from './DesktopLayoutContainer';
-import RegisterHotkeys from './RegisterHotkeys';
-import { styles } from './style';
 
 const FeedbackModal = lazy(() => import('@/components/FeedbackModal'));
 
@@ -59,32 +58,30 @@ const Layout: FC = () => {
       {isDesktop && <AuthRequiredModal />}
 
       <Suspense fallback={null}>{isDesktop && <TitleBar />}</Suspense>
-      <DndContextWrapper>
-        <Flexbox
-          horizontal
-          className={cx(isPWA ? styles.mainContainerPWA : styles.mainContainer)}
-          width={'100%'}
-          height={
-            isDesktop
-              ? `calc(100% - ${TITLE_BAR_HEIGHT}px)`
-              : showCloudPromotion
-                ? `calc(100% - ${BANNER_HEIGHT}px)`
-                : '100%'
-          }
-        >
-          <NavPanel />
-          <DesktopLayoutContainer>
-            <MarketAuthProvider isDesktop={isDesktop}>
-              <DesktopHomeLayout>
-                <DesktopHome />
-              </DesktopHomeLayout>
-              <Suspense fallback={<Loading debugId="DesktopMainLayout > Outlet" />}>
-                <Outlet />
-              </Suspense>
-            </MarketAuthProvider>
-          </DesktopLayoutContainer>
-        </Flexbox>
-      </DndContextWrapper>
+      <Flexbox
+        horizontal
+        className={cx(isPWA ? styles.mainContainerPWA : styles.mainContainer)}
+        width={'100%'}
+        height={
+          isDesktop
+            ? `calc(100% - ${TITLE_BAR_HEIGHT}px)`
+            : showCloudPromotion
+              ? `calc(100% - ${BANNER_HEIGHT}px)`
+              : '100%'
+        }
+      >
+        <NavPanel />
+        <DesktopLayoutContainer>
+          <MarketAuthProvider isDesktop={isDesktop}>
+            <DesktopHomeLayout>
+              <DesktopHome />
+            </DesktopHomeLayout>
+            <Suspense fallback={<Loading debugId="DesktopMainLayout > Outlet" />}>
+              <Outlet />
+            </Suspense>
+          </MarketAuthProvider>
+        </DesktopLayoutContainer>
+      </Flexbox>
       <Suspense fallback={null}>
         <HotkeyHelperPanel />
         <RegisterHotkeys />

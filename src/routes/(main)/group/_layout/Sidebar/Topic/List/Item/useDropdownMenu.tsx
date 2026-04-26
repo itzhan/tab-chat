@@ -7,11 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { isDesktop } from '@/const/version';
-import { pluginRegistry } from '@/features/Electron/titlebar/RecentlyViewed/plugins';
 import { useAgentStore } from '@/store/agent';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useChatStore } from '@/store/chat';
-import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
 
 interface TopicItemDropdownMenuProps {
@@ -30,7 +28,6 @@ export const useTopicItemDropdownMenu = ({
   const openTopicInNewWindow = useGlobalStore((s) => s.openTopicInNewWindow);
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
   const activeGroupId = useAgentGroupStore((s) => s.activeGroupId);
-  const addTab = useElectronStore((s) => s.addTab);
 
   const [autoRenameTopicTitle, duplicateTopic, removeTopic] = useChatStore((s) => [
     s.autoRenameTopicTitle,
@@ -70,11 +67,22 @@ export const useTopicItemDropdownMenu = ({
               onClick: () => {
                 if (!activeGroupId) return;
                 const url = `/group/${activeGroupId}?topic=${id}`;
-                const reference = pluginRegistry.parseUrl(`/group/${activeGroupId}`, `topic=${id}`);
-                if (reference) {
-                  addTab(reference);
-                  navigate(url);
-                }
+                void Promise.all([
+                  import('@/features/Electron/titlebar/RecentlyViewed/plugins'),
+                  import('@/store/electron'),
+                ])
+                  .then(([{ pluginRegistry }, { useElectronStore }]) => {
+                    const reference = pluginRegistry.parseUrl(
+                      `/group/${activeGroupId}`,
+                      `topic=${id}`,
+                    );
+                    if (!reference) return;
+                    useElectronStore.getState().addTab(reference);
+                    navigate(url);
+                  })
+                  .catch((error) => {
+                    console.error('Failed to open group topic in desktop tab:', error);
+                  });
               },
             },
             {
@@ -137,7 +145,6 @@ export const useTopicItemDropdownMenu = ({
     duplicateTopic,
     removeTopic,
     openTopicInNewWindow,
-    addTab,
     navigate,
     toggleEditing,
     t,

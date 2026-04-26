@@ -5,9 +5,7 @@ import { memo, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
-import { pluginRegistry } from '@/features/Electron/titlebar/RecentlyViewed/plugins';
 import NavItem from '@/features/NavPanel/components/NavItem';
-import { useElectronStore } from '@/store/electron';
 import { pageSelectors, usePageStore } from '@/store/page';
 
 import Actions from './Actions';
@@ -28,7 +26,6 @@ const PageListItem = memo<DocumentItemProps>(({ pageId, className }) => {
 
   const selectPage = usePageStore((s) => s.selectPage);
   const setRenamingPageId = usePageStore((s) => s.setRenamingPageId);
-  const addTab = useElectronStore((s) => s.addTab);
 
   const active = selectedPageId === pageId;
   const title = document?.title || t('pageList.untitled');
@@ -67,12 +64,20 @@ const PageListItem = memo<DocumentItemProps>(({ pageId, className }) => {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    const reference = pluginRegistry.parseUrl(`/page/${pageId}`, '');
-    if (reference) {
-      addTab(reference);
-      selectPage(pageId);
-    }
-  }, [pageId, addTab, selectPage]);
+    void Promise.all([
+      import('@/features/Electron/titlebar/RecentlyViewed/plugins'),
+      import('@/store/electron'),
+    ])
+      .then(([{ pluginRegistry }, { useElectronStore }]) => {
+        const reference = pluginRegistry.parseUrl(`/page/${pageId}`, '');
+        if (!reference) return;
+        useElectronStore.getState().addTab(reference);
+        selectPage(pageId);
+      })
+      .catch((error) => {
+        console.error('Failed to open page in desktop tab:', error);
+      });
+  }, [pageId, selectPage]);
 
   // Icon with emoji support
   const icon = useMemo(() => {

@@ -30,8 +30,6 @@ import {
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useElectronStore } from '@/store/electron';
-import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
 import {
   featureFlagsSelectors,
@@ -73,16 +71,12 @@ export const useCategory = () => {
     userProfileSelectors.nickName(s),
     userProfileSelectors.isAdmin(s),
   ]);
-  const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
 
   const avatarUrl = useMemo(() => {
     if (!avatar) return undefined;
-    if (isDesktop && avatar.startsWith('/') && remoteServerUrl) {
-      return remoteServerUrl + avatar;
-    }
     return avatar;
-  }, [avatar, remoteServerUrl]);
+  }, [avatar]);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const categoryGroups: CategoryGroup[] = useMemo(() => {
     const groups: CategoryGroup[] = [];

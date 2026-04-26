@@ -2,7 +2,6 @@
 
 import 'antd/dist/reset.css';
 
-import { TITLE_BAR_HEIGHT } from '@lobechat/desktop-bridge';
 import { type NeutralColors, type PrimaryColors } from '@lobehub/ui';
 import { ConfigProvider, FontLoader, ThemeProvider } from '@lobehub/ui';
 import { message as antdMessage } from 'antd';
@@ -25,6 +24,8 @@ import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { GlobalStyle } from '@/styles';
 import { setCookie } from '@/utils/client/cookie';
+
+const DESKTOP_TITLE_BAR_HEIGHT = 38;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   app: css`
@@ -109,7 +110,7 @@ const AppTheme = memo<AppThemeProps>(
       userGeneralSettingsSelectors.neutralColor(s),
       userGeneralSettingsSelectors.animationMode(s),
     ]);
-    const messageTop = isDesktop ? TITLE_BAR_HEIGHT + 8 : undefined;
+    const messageTop = isDesktop ? DESKTOP_TITLE_BAR_HEIGHT + 8 : undefined;
     const appConfig = useMemo(
       () => (messageTop === undefined ? {} : { message: { top: messageTop } }),
       [messageTop],

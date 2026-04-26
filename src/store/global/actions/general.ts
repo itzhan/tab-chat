@@ -5,8 +5,6 @@ import { type SWRResponse } from 'swr';
 import { CURRENT_VERSION, isDesktop } from '@/const/version';
 import { useOnlyFetchOnceSWR } from '@/libs/swr';
 import { globalService } from '@/services/global';
-import { getElectronStoreState } from '@/store/electron';
-import { electronSyncSelectors } from '@/store/electron/selectors';
 import { type SystemStatus } from '@/store/global/initialState';
 import { type StoreSetter } from '@/store/types';
 import { type LocaleMode } from '@/types/locale';
@@ -176,11 +174,7 @@ export class GlobalGeneralActionImpl {
 
   useCheckServerVersion = (): SWRResponse<string | null> => {
     return useOnlyFetchOnceSWR(
-      isDesktop &&
-        // only check server version for self-hosted remote server
-        electronSyncSelectors.storageMode(getElectronStoreState()) !== 'cloud'
-        ? 'checkServerVersion'
-        : null,
+      isDesktop ? 'checkServerVersion' : null,
       async () => globalService.getServerVersion(),
       {
         onSuccess: (data: string | null) => {

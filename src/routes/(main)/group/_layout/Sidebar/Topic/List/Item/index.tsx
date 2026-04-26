@@ -6,12 +6,10 @@ import { memo, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
-import { pluginRegistry } from '@/features/Electron/titlebar/RecentlyViewed/plugins';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
-import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
 
 import ThreadList from '../../TopicListContent/ThreadList';
@@ -67,7 +65,6 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId }) =>
   const { t } = useTranslation('topic');
   const toggleMobileTopic = useGlobalStore((s) => s.toggleMobileTopic);
   const [activeGroupId, switchTopic] = useAgentGroupStore((s) => [s.activeGroupId, s.switchTopic]);
-  const addTab = useElectronStore((s) => s.addTab);
 
   // Construct href for cmd+click support
   const href = useMemo(() => {
@@ -113,13 +110,21 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId }) =>
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    const reference = pluginRegistry.parseUrl(`/group/${activeGroupId}`, `topic=${id}`);
-    if (reference) {
-      addTab(reference);
-      switchTopic(id);
-      toggleMobileTopic(false);
-    }
-  }, [id, activeGroupId, addTab, switchTopic, toggleMobileTopic]);
+    void Promise.all([
+      import('@/features/Electron/titlebar/RecentlyViewed/plugins'),
+      import('@/store/electron'),
+    ])
+      .then(([{ pluginRegistry }, { useElectronStore }]) => {
+        const reference = pluginRegistry.parseUrl(`/group/${activeGroupId}`, `topic=${id}`);
+        if (!reference) return;
+        useElectronStore.getState().addTab(reference);
+        switchTopic(id);
+        toggleMobileTopic(false);
+      })
+      .catch((error) => {
+        console.error('Failed to open group topic in desktop tab:', error);
+      });
+  }, [id, activeGroupId, switchTopic, toggleMobileTopic]);
 
   const dropdownMenu = useTopicItemDropdownMenu({
     id,

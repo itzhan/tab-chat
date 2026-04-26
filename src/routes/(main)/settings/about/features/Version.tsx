@@ -1,19 +1,13 @@
 import { BRANDING_NAME } from '@lobechat/business-const';
-import {
-  getElectronIpc,
-  type UpdaterState,
-  useWatchBroadcast,
-} from '@lobechat/electron-client-ipc';
 import { Block, Button, Flexbox, Tag } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
 import { CHANGELOG_URL, MANUAL_UPGRADE_URL, OFFICIAL_SITE } from '@/const/url';
-import { CURRENT_VERSION } from '@/const/version';
+import { CURRENT_VERSION, isDesktop } from '@/const/version';
 import { useNewVersion } from '@/features/User/UserPanel/useNewVersion';
-import { autoUpdateService } from '@/services/electron/autoUpdate';
 import { useGlobalStore } from '@/store/global';
 
 import { APP_VERSION } from './appVersion';
@@ -23,6 +17,14 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     border-radius: calc(${cssVar.borderRadiusLG} * 2);
   `,
 }));
+
+interface UpdaterState {
+  errorMessage?: string;
+  progress?: {
+    percent: number;
+  };
+  stage: 'checking' | 'downloaded' | 'downloading' | 'error' | 'idle' | 'latest';
+}
 
 const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
   const hasNewVersion = useNewVersion();
@@ -36,24 +38,29 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
   useCheckServerVersion();
 
   const showServerVersion = serverVersion && serverVersion !== CURRENT_VERSION;
-  const isDesktop = useMemo(() => !!getElectronIpc(), []);
 
   const [updaterState, setUpdaterState] = useState<UpdaterState>({ stage: 'idle' });
   const [buildChannel, setBuildChannel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService.getUpdaterState().then(setUpdaterState);
+    import('@/services/electron/autoUpdate')
+      .then(({ autoUpdateService }) => autoUpdateService.getUpdaterState())
+      .then(setUpdaterState)
+      .catch((error) => {
+        console.error('Failed to get updater state:', error);
+      });
   }, [isDesktop]);
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService.getBuildChannel().then(setBuildChannel);
+    import('@/services/electron/autoUpdate')
+      .then(({ autoUpdateService }) => autoUpdateService.getBuildChannel())
+      .then(setBuildChannel)
+      .catch((error) => {
+        console.error('Failed to get build channel:', error);
+      });
   }, [isDesktop]);
-
-  useWatchBroadcast('updaterStateChanged', (state: UpdaterState) => {
-    setUpdaterState(state);
-  });
 
   const renderUpdateButton = () => {
     if (!isDesktop) {
@@ -89,7 +96,17 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       }
       case 'downloaded': {
         return (
-          <Button block={mobile} type="primary" onClick={() => void autoUpdateService.installNow()}>
+          <Button
+            block={mobile}
+            type="primary"
+            onClick={() => {
+              void import('@/services/electron/autoUpdate')
+                .then(({ autoUpdateService }) => autoUpdateService.installNow())
+                .catch((error) => {
+                  console.error('Failed to install update:', error);
+                });
+            }}
+          >
             {t('restartToUpdate')}
           </Button>
         );
@@ -103,7 +120,22 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       }
       default: {
         return (
-          <Button block={mobile} onClick={() => void autoUpdateService.checkUpdate()}>
+          <Button
+            block={mobile}
+            onClick={() => {
+              void import('@/services/electron/autoUpdate')
+                .then(({ autoUpdateService }) => autoUpdateService.checkUpdate())
+                .then(() =>
+                  import('@/services/electron/autoUpdate').then(({ autoUpdateService }) =>
+                    autoUpdateService.getUpdaterState(),
+                  ),
+                )
+                .then(setUpdaterState)
+                .catch((error) => {
+                  console.error('Failed to check update:', error);
+                });
+            }}
+          >
             {t('checkForUpdates')}
           </Button>
         );

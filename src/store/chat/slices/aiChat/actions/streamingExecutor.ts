@@ -22,7 +22,6 @@ import { t } from 'i18next';
 import { createAgentToolsEngine } from '@/helpers/toolEngineering';
 import { type ResolvedAgentConfig } from '@/services/chat/mecha';
 import { resolveAgentConfig } from '@/services/chat/mecha';
-import { localFileService } from '@/services/electron/localFileService';
 import { messageService } from '@/services/message';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -51,6 +50,7 @@ const dynamicInterventionAudits = {
     areAllPathsSafe: async ({ paths, resolveAgainstScope }) => {
       if (!isDesktop) return false;
 
+      const { localFileService } = await import('@/services/electron/localFileService');
       const result = await localFileService.auditSafePaths({ paths, resolveAgainstScope });
       return result.allSafe;
     },

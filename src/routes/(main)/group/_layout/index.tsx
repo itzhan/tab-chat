@@ -1,15 +1,16 @@
 import { Flexbox } from '@lobehub/ui';
-import { type FC } from 'react';
+import { type FC, lazy, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { isDesktop } from '@/const/version';
-import ProtocolUrlHandler from '@/features/ProtocolUrlHandler';
 import { useInitGroupConfig } from '@/hooks/useInitGroupConfig';
 
 import GroupIdSync from './GroupIdSync';
 import RegisterHotkeys from './RegisterHotkeys';
 import Sidebar from './Sidebar';
 import { styles } from './style';
+
+const ProtocolUrlHandler = lazy(() => import('@/features/ProtocolUrlHandler'));
 
 const Layout: FC = () => {
   useInitGroupConfig();
@@ -21,7 +22,7 @@ const Layout: FC = () => {
         <Outlet />
       </Flexbox>
       <RegisterHotkeys />
-      {isDesktop && <ProtocolUrlHandler />}
+      <Suspense fallback={null}>{isDesktop && <ProtocolUrlHandler />}</Suspense>
       <GroupIdSync />
     </>
   );

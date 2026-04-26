@@ -1,7 +1,6 @@
 'use client';
 
 import { isDesktop } from '@lobechat/const';
-import { TITLE_BAR_HEIGHT } from '@lobechat/desktop-bridge';
 import { type SkillResourceTreeNode } from '@lobechat/types';
 import { Button, Drawer, Flexbox } from '@lobehub/ui';
 import { Alert, App, Form as AForm, Popconfirm, Skeleton } from 'antd';
@@ -14,6 +13,8 @@ import FileTree from '@/features/FileTree';
 import { useToolStore } from '@/store/tool';
 
 import SkillEditForm, { type SkillEditFormValues } from './SkillEditForm';
+
+const DESKTOP_TITLE_BAR_HEIGHT = 38;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   divider: css`
@@ -140,7 +141,7 @@ const AgentSkillEdit = memo<AgentSkillEditProps>(({ skillId, open, onClose }) =>
       destroyOnHidden
       containerMaxWidth={'auto'}
       footer={footer}
-      height={isDesktop ? `calc(100vh - ${TITLE_BAR_HEIGHT}px)` : '100vh'}
+      height={isDesktop ? `calc(100vh - ${DESKTOP_TITLE_BAR_HEIGHT}px)` : '100vh'}
       open={open}
       placement={'bottom'}
       push={false}

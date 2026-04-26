@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
 import { getRecentDirs } from '@/features/ChatInput/RuntimeConfig/recentDirs';
-import { localFileService } from '@/services/electron/localFileService';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -61,7 +60,9 @@ const FolderTag = memo(() => {
   const displayName = topicBoundDirectory.split('/').findLast(Boolean) || topicBoundDirectory;
 
   const handleOpen = () => {
-    void localFileService.openLocalFolder({ isDirectory: true, path: topicBoundDirectory });
+    void import('@/services/electron/localFileService').then(({ localFileService }) => {
+      void localFileService.openLocalFolder({ isDirectory: true, path: topicBoundDirectory });
+    });
   };
 
   return (

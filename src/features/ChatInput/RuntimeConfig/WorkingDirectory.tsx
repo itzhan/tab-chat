@@ -6,7 +6,6 @@ import { CheckIcon, FolderIcon, FolderOpenIcon, GitBranchIcon, XIcon } from 'luc
 import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { electronSystemService } from '@/services/electron/system';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -138,6 +137,7 @@ const WorkingDirectoryContent = memo<WorkingDirectoryContentProps>(({ agentId, o
 
   const handleChooseFolder = useCallback(async () => {
     if (!isDesktop) return;
+    const { electronSystemService } = await import('@/services/electron/system');
     const result = await electronSystemService.selectFolder({
       defaultPath: effectiveDir || undefined,
       title: t('localSystem.workingDirectory.selectFolder'),

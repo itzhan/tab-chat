@@ -37,6 +37,7 @@ export function generateStaticParams() {
 }
 
 const isDev = process.env.NODE_ENV === 'development';
+const useBuiltSpaTemplateInDev = process.env.USE_BUILT_SPA_TEMPLATE === '1';
 const VITE_DEV_ORIGIN = 'http://localhost:9876';
 
 async function rewriteViteAssetUrls(html: string): Promise<string> {
@@ -87,7 +88,7 @@ globalThis.Worker.prototype=O.prototype;
 }
 
 async function getTemplate(isMobile: boolean): Promise<string> {
-  if (isDev) {
+  if (isDev && !useBuiltSpaTemplateInDev) {
     // Dev-only: bypass HTTP_PROXY for localhost Vite server (some users have Clash / VPN
     // setting HTTP_PROXY shell env that undici's global dispatcher respects).
     const undici = await import('undici');

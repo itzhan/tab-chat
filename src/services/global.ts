@@ -4,8 +4,6 @@ import { type PartialDeep } from 'type-fest';
 import { type VersionResponseData } from '@/app/(backend)/api/version/route';
 import { BusinessGlobalService } from '@/business/client/services/BusinessGlobalService';
 import { lambdaClient } from '@/libs/trpc/client';
-import { getElectronStoreState } from '@/store/electron';
-import { electronSyncSelectors } from '@/store/electron/selectors';
 import { type LobeAgentConfig } from '@/types/agent';
 import { type GlobalRuntimeConfig } from '@/types/serverConfig';
 
@@ -29,20 +27,23 @@ class GlobalService extends BusinessGlobalService {
    * @throws Error for other failures (network errors, 500s, etc.) to allow SWR retry
    */
   getServerVersion = async (): Promise<string | null> => {
-    const origin = (() => {
-      if (isDesktop) {
-        const remoteServerUrl = electronSyncSelectors.remoteServerUrl(getElectronStoreState());
-        if (!remoteServerUrl) return undefined;
+    const origin = await (async () => {
+      if (!isDesktop) return undefined;
 
-        try {
-          return new URL(remoteServerUrl).origin;
-        } catch {
-          // fallback: use as-is; URL construction below will throw if invalid
-          return remoteServerUrl;
-        }
+      const [{ getElectronStoreState }, { electronSyncSelectors }] = await Promise.all([
+        import('@/store/electron'),
+        import('@/store/electron/selectors'),
+      ]);
+
+      const remoteServerUrl = electronSyncSelectors.remoteServerUrl(getElectronStoreState());
+      if (!remoteServerUrl) return undefined;
+
+      try {
+        return new URL(remoteServerUrl).origin;
+      } catch {
+        // fallback: use as-is; URL construction below will throw if invalid
+        return remoteServerUrl;
       }
-
-      return undefined;
     })();
 
     if (!origin) return null;

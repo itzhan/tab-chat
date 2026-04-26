@@ -6,7 +6,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
-import { localFileService } from '@/services/electron/localFileService';
 
 const styles = createStaticStyles(({ css }) => ({
   container: css`
@@ -45,17 +44,26 @@ interface LocalFileProps {
   readonly?: boolean;
 }
 
-export const LocalFile = ({ name, path, isDirectory = false, readonly = false }: LocalFileProps) => {
+export const LocalFile = ({
+  name,
+  path,
+  isDirectory = false,
+  readonly = false,
+}: LocalFileProps) => {
   const { t } = useTranslation('components');
 
   const handleOpenFile = () => {
     if (!path) return;
-    localFileService.openLocalFileOrFolder(path, isDirectory);
+    void import('@/services/electron/localFileService').then(({ localFileService }) => {
+      void localFileService.openLocalFileOrFolder(path, isDirectory);
+    });
   };
 
   const handleOpenFolder = () => {
     if (!path) return;
-    localFileService.openFileFolder(path);
+    void import('@/services/electron/localFileService').then(({ localFileService }) => {
+      void localFileService.openFileFolder(path);
+    });
   };
 
   const fileContent = (

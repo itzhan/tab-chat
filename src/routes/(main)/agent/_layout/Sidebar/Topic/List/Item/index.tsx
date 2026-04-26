@@ -6,13 +6,11 @@ import { memo, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
-import { pluginRegistry } from '@/features/Electron/titlebar/RecentlyViewed/plugins';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
-import { useElectronStore } from '@/store/electron';
 import type { ChatTopicMetadata } from '@/types/topic';
 
 import { useTopicNavigation } from '../../hooks/useTopicNavigation';
@@ -69,7 +67,6 @@ interface TopicItemProps {
 const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, metadata }) => {
   const { t } = useTranslation('topic');
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
-  const addTab = useElectronStore((s) => s.addTab);
 
   // Construct href for cmd+click support
   const href = useMemo(() => {
@@ -115,12 +112,20 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, meta
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    const reference = pluginRegistry.parseUrl(`/agent/${activeAgentId}`, `topic=${id}`);
-    if (reference) {
-      addTab(reference);
-      navigateToTopic(id);
-    }
-  }, [id, activeAgentId, addTab, navigateToTopic]);
+    void Promise.all([
+      import('@/features/Electron/titlebar/RecentlyViewed/plugins'),
+      import('@/store/electron'),
+    ])
+      .then(([{ pluginRegistry }, { useElectronStore }]) => {
+        const reference = pluginRegistry.parseUrl(`/agent/${activeAgentId}`, `topic=${id}`);
+        if (!reference) return;
+        useElectronStore.getState().addTab(reference);
+        navigateToTopic(id);
+      })
+      .catch((error) => {
+        console.error('Failed to open topic in desktop tab:', error);
+      });
+  }, [id, activeAgentId, navigateToTopic]);
 
   const { dropdownMenu } = useTopicItemDropdownMenu({
     fav,

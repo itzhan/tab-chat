@@ -3,6 +3,7 @@
 import { Fragment, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { isDesktop } from '@/const/version';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { SettingsTabs } from '@/store/global/initialState';
@@ -30,6 +31,8 @@ const REDIRECT_MAP: Record<string, string> = {
   [SettingsTabs.Image]: SettingsTabs.ServiceModel,
 };
 
+const DESKTOP_ONLY_TABS = new Set<string>([SettingsTabs.Proxy, SettingsTabs.SystemTools]);
+
 interface SettingsContentProps {
   activeTab?: string;
   mobile?: boolean;
@@ -43,6 +46,10 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
   useEffect(() => {
     if (activeTab && REDIRECT_MAP[activeTab]) {
       navigate(`/settings/${REDIRECT_MAP[activeTab]}`, { replace: true });
+      return;
+    }
+    if (activeTab && DESKTOP_ONLY_TABS.has(activeTab) && !isDesktop) {
+      navigate('/settings/profile', { replace: true });
       return;
     }
     // Non-admins cannot access admin tabs even via direct URL
@@ -77,6 +84,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
   };
 
   if (activeTab && REDIRECT_MAP[activeTab]) return null;
+  if (activeTab && DESKTOP_ONLY_TABS.has(activeTab) && !isDesktop) return null;
 
   if (mobile) {
     return activeTab ? renderComponent(activeTab) : renderComponent(SettingsTabs.Profile);

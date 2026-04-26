@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
 import SettingHeader from '@/routes/(main)/settings/features/SettingHeader';
-import { autoUpdateService } from '@/services/electron/autoUpdate';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors, preferenceSelectors, settingsSelectors } from '@/store/user/selectors';
@@ -55,15 +54,22 @@ const Page = memo(() => {
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService
-      .getUpdateChannel()
+    import('@/services/electron/autoUpdate')
+      .then(({ autoUpdateService }) => autoUpdateService.getUpdateChannel())
       .then(setChannel)
-      .catch(() => {});
+      .catch((error) => {
+        console.error('Failed to get update channel:', error);
+      });
   }, []);
 
   const handleChannelChange = useCallback((value: UpdateChannelValue) => {
     setChannel(value);
-    autoUpdateService.setUpdateChannel(value);
+    if (!isDesktop) return;
+    void import('@/services/electron/autoUpdate')
+      .then(({ autoUpdateService }) => autoUpdateService.setUpdateChannel(value))
+      .catch((error) => {
+        console.error('Failed to set update channel:', error);
+      });
   }, []);
 
   if (!isUserStateInit) return <Skeleton active paragraph={{ rows: 5 }} title={false} />;

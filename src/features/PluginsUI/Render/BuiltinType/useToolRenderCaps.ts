@@ -1,11 +1,8 @@
 import type { ToolRenderCapabilities } from '@lobechat/shared-tool-ui';
 import { useMemo } from 'react';
 
-import { localFileService } from '@/services/electron/localFileService';
 import { useChatStore } from '@/store/chat';
 import { chatToolSelectors } from '@/store/chat/slices/builtinTool/selectors';
-import { useElectronStore } from '@/store/electron';
-import { desktopStateSelectors } from '@/store/electron/selectors';
 
 /**
  * Provides platform-aware capabilities for tool render components.
@@ -24,13 +21,14 @@ export const useToolRenderCaps = (): ToolRenderCapabilities => {
 
     if (isElectron) {
       caps.openFile = (path: string) => {
-        localFileService.openLocalFile({ path });
+        void import('@/services/electron/localFileService').then(({ localFileService }) => {
+          void localFileService.openLocalFile({ path });
+        });
       };
       caps.openFolder = (path: string) => {
-        localFileService.openLocalFolder({ isDirectory: false, path });
-      };
-      caps.displayRelativePath = (path: string) => {
-        return desktopStateSelectors.displayRelativePath(path)(useElectronStore.getState());
+        void import('@/services/electron/localFileService').then(({ localFileService }) => {
+          void localFileService.openLocalFolder({ isDirectory: false, path });
+        });
       };
     }
 

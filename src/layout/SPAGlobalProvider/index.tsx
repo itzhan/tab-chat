@@ -16,7 +16,6 @@ import { GroupWizardProvider } from '@/layout/GlobalProvider/GroupWizardProvider
 import ImportSettings from '@/layout/GlobalProvider/ImportSettings';
 import NextThemeProvider from '@/layout/GlobalProvider/NextThemeProvider';
 import QueryProvider from '@/layout/GlobalProvider/Query';
-import ServerVersionOutdatedAlert from '@/layout/GlobalProvider/ServerVersionOutdatedAlert';
 import StoreInitialization from '@/layout/GlobalProvider/StoreInitialization';
 import { ServerConfigStoreProvider } from '@/store/serverConfig/Provider';
 import type { SPAServerConfig } from '@/types/spaServerConfig';
@@ -30,6 +29,9 @@ const BaseModalHost = lazy(() =>
 const ToastHost = lazy(() => import('@lobehub/ui/base-ui').then((m) => ({ default: m.ToastHost })));
 const ContextMenuHost = lazy(() =>
   import('@lobehub/ui').then((m) => ({ default: m.ContextMenuHost })),
+);
+const ServerVersionOutdatedAlert = lazy(
+  () => import('@/layout/GlobalProvider/ServerVersionOutdatedAlert'),
 );
 
 const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
@@ -56,7 +58,7 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
               <AuthProvider>
                 <StoreInitialization />
 
-                {isDesktop && <ServerVersionOutdatedAlert />}
+                <Suspense fallback={null}>{isDesktop && <ServerVersionOutdatedAlert />}</Suspense>
                 <FaviconProvider>
                   <DynamicFavicon />
                   <GroupWizardProvider>
