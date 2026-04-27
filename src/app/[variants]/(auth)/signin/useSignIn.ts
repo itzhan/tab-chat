@@ -180,12 +180,20 @@ export const useSignIn = () => {
           onError: (ctx) => {
             console.error('Sign in error:', ctx.error);
             if (ctx.error.status === 403) {
+              // /verify-email is another Next SSR page — soft nav is fine.
               router.push(
                 `/verify-email?email=${encodeURIComponent(email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
               );
             }
           },
-          onSuccess: () => router.push(callbackUrl),
+          // callbackUrl points at the Vite SPA (route handler). `router.push`
+          // does NOT reliably reload the document, so the SPA's better-auth
+          // useSession() stays cached as anonymous → isSignedIn never flips
+          // → auth-gated screens stick on a spinner. Hard-navigate so the SPA
+          // boots fresh under the cookie that signin just set.
+          onSuccess: () => {
+            window.location.href = callbackUrl;
+          },
         },
       );
 

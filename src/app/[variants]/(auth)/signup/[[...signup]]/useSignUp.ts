@@ -66,11 +66,19 @@ export const useSignUp = () => {
       }
 
       if (enableEmailVerification) {
+        // /verify-email is another Next.js SSR page — soft navigation is fine.
         router.push(
           `/verify-email?email=${encodeURIComponent(values.email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
         );
       } else {
-        router.push(callbackUrl);
+        // callbackUrl typically points at the Vite SPA (`/`), served by a Next
+        // route handler. `router.push` to a route-handler URL does NOT
+        // reliably trigger a full document reload across Next versions, which
+        // leaves the SPA's better-auth `useSession()` nanostore cached at the
+        // anonymous result — `isSignedIn` never flips and any auth-gated
+        // screen sticks on a spinner. Force a hard navigation so the browser
+        // loads the SPA HTML fresh under the cookie that signup just set.
+        window.location.href = callbackUrl;
       }
     } catch {
       message.error(t('betterAuth.signup.error'));
