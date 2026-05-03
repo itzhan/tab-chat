@@ -507,4 +507,24 @@ describe('convertOpenAIImageUsage', () => {
       cost: 0.16647, // Based on pricing: 14 * 5/1M + 0 * 10/1M + 4160 * 40/1M = 0.00007 + 0 + 0.1664 = 0.16647
     });
   });
+
+  it('should not throw when upstream omits input_tokens_details', () => {
+    // Some OpenAI-compatible image proxies return a minimal usage shape without `*_details`.
+    const minimalUsage = {
+      input_tokens: 3,
+      output_tokens: 765,
+      total_tokens: 768,
+    } as unknown as OpenAI.Images.ImagesResponse.Usage;
+
+    const result = convertOpenAIImageUsage(minimalUsage);
+
+    expect(result).toEqual({
+      inputTextTokens: 3,
+      inputImageTokens: 0,
+      outputImageTokens: 765,
+      totalInputTokens: 3,
+      totalOutputTokens: 765,
+      totalTokens: 768,
+    });
+  });
 });

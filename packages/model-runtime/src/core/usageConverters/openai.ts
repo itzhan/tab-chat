@@ -146,8 +146,8 @@ export const convertOpenAIImageUsage = (
   pricing?: Pricing,
 ): ModelUsage => {
   const data: ModelTokensUsage = {
-    inputImageTokens: usage.input_tokens_details.image_tokens,
-    inputTextTokens: usage.input_tokens_details.text_tokens,
+    inputImageTokens: usage.input_tokens_details?.image_tokens ?? 0,
+    inputTextTokens: usage.input_tokens_details?.text_tokens ?? usage.input_tokens ?? 0,
     outputImageTokens: usage.output_tokens,
     totalInputTokens: usage.input_tokens,
     totalOutputTokens: usage.output_tokens,
